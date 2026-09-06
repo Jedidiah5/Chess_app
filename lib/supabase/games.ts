@@ -1,20 +1,21 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GameRow, MoveRow } from "@/types/game";
 
+const GAME_COLUMNS =
+  "id, white_id, black_id, current_fen, ply, status, result, reason, rated, initial_ms, increment_ms, white_ms, black_ms, last_move_at, white_seen_at, black_seen_at, draw_offer_by, created_at, started_at, ended_at";
+
 export async function fetchGame(
   supabase: SupabaseClient,
   gameId: string,
 ): Promise<GameRow | null> {
   const { data, error } = await supabase
     .from("games")
-    .select(
-      "id, white_id, black_id, current_fen, ply, status, result, reason, rated, initial_ms, increment_ms, white_ms, black_ms, last_move_at, created_at, started_at, ended_at",
-    )
+    .select(GAME_COLUMNS)
     .eq("id", gameId)
     .maybeSingle();
 
   if (error) {
-    throw error;
+    throw new Error(error.message);
   }
 
   return data as GameRow | null;
@@ -31,7 +32,7 @@ export async function fetchMoves(
     .order("ply", { ascending: true });
 
   if (error) {
-    throw error;
+    throw new Error(error.message);
   }
 
   return (data ?? []) as MoveRow[];
@@ -48,10 +49,30 @@ export async function fetchInviteCode(
     .maybeSingle();
 
   if (error) {
-    throw error;
+    throw new Error(error.message);
   }
 
   return data?.code ?? null;
+}
+
+export async function fetchServerNow(supabase: SupabaseClient): Promise<number> {
+  const { data, error } = await supabase.rpc("server_now");
+  if (error || !data) {
+    return Date.now();
+  }
+  return Date.parse(data as string);
+}
+
+export async function touchPresence(
+  supabase: SupabaseClient,
+  gameId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("touch_presence", {
+    p_game_id: gameId,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export function gameResultLabel(

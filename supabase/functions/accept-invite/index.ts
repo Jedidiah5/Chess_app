@@ -88,6 +88,7 @@ Deno.serve(async (req) => {
       status: "active",
       started_at: now,
       last_move_at: now,
+      black_seen_at: now,
     })
     .eq("id", game.id)
     .eq("status", "waiting");

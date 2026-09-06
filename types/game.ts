@@ -11,6 +11,8 @@ export type DbEndReason =
   | "insufficient_material"
   | "agreement";
 
+export type TimeControl = "blitz" | "rapid" | "untimed";
+
 export type GameRow = {
   id: string;
   white_id: string;
@@ -26,6 +28,9 @@ export type GameRow = {
   white_ms: number;
   black_ms: number;
   last_move_at: string | null;
+  white_seen_at: string | null;
+  black_seen_at: string | null;
+  draw_offer_by: string | null;
   created_at: string;
   started_at: string | null;
   ended_at: string | null;
@@ -37,7 +42,7 @@ export type MoveRow = {
   san: string;
   uci: string;
   fen_after: string;
-  ms_left: number; 
+  ms_left: number;
   created_at: string;
 };
 
@@ -67,7 +72,25 @@ export type SubmitMoveResponse =
       fen: string;
       ply: number;
       status: GameStatus;
+      white_ms?: number;
+      black_ms?: number;
       result?: DbGameResult;
       reason?: DbEndReason;
     }
   | FunctionError;
+
+export type ClaimResultResponse =
+  | {
+      ok: true;
+      result: DbGameResult | null;
+      reason: DbEndReason | null;
+    }
+  | FunctionError;
+
+export type Claim =
+  | "resign"
+  | "timeout"
+  | "disconnect"
+  | "draw_offer"
+  | "draw_accept"
+  | "draw_decline";

@@ -15,7 +15,7 @@ export async function getProfileById(
     .maybeSingle();
 
   if (error) {
-    throw error;
+    throw new Error(error.message);
   }
 
   return data as Profile | null;
@@ -32,7 +32,7 @@ export async function getProfileByUsername(
     .maybeSingle();
 
   if (error) {
-    throw error;
+    throw new Error(error.message);
   }
 
   return data as Profile | null;
@@ -49,7 +49,7 @@ export async function isUsernameAvailable(
     .maybeSingle();
 
   if (error) {
-    throw error;
+    throw new Error(error.message);
   }
 
   return data === null;

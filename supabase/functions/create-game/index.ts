@@ -1,3 +1,5 @@
+import { resolveTimeControl } from "../_shared/timeControl.ts";
+import type { TimeControl } from "../_shared/timeControl.ts";
 import { generateInviteCode } from "../_shared/invite.ts";
 import {
   errorResponse,
@@ -8,7 +10,7 @@ import {
 } from "../_shared/supabase.ts";
 
 type CreateGameBody = {
-  timeControl?: "blitz" | "rapid" | "untimed";
+  timeControl?: TimeControl;
   color?: "white" | "black" | "random";
 };
 
@@ -35,23 +37,24 @@ Deno.serve(async (req) => {
   }
 
   const timeControl = body.timeControl ?? "untimed";
-  if (timeControl !== "untimed") {
-    return errorResponse("time_control_not_supported");
+  if (timeControl !== "blitz" && timeControl !== "rapid" && timeControl !== "untimed") {
+    return errorResponse("invalid_time_control");
   }
 
+  const { initialMs, incrementMs } = resolveTimeControl(timeControl);
   const db = getServiceClient();
 
-  // Schema requires white_id NOT NULL. Creator occupies white; joiner takes black.
   const { data: game, error: gameError } = await db
     .from("games")
     .insert({
       white_id: user.id,
       status: "waiting",
       rated: false,
-      initial_ms: 0,
-      increment_ms: 0,
-      white_ms: 0,
-      black_ms: 0,
+      initial_ms: initialMs,
+      increment_ms: incrementMs,
+      white_ms: initialMs,
+      black_ms: initialMs,
+      white_seen_at: new Date().toISOString(),
     })
     .select("id")
     .single();

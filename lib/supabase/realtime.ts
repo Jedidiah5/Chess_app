@@ -7,15 +7,23 @@ import type { GameRow, MoveRow } from "@/types/game";
 type GameChannelHandlers = {
   onMove: (move: MoveRow) => void;
   onGameUpdate: (game: GameRow) => void;
+  onPresenceSync?: (presentUserIds: string[]) => void;
+  onPresenceJoin?: (userId: string) => void;
+  onPresenceLeave?: (userId: string) => void;
 };
 
 export function subscribeToGame(
   supabase: SupabaseClient,
   gameId: string,
+  userId: string,
   handlers: GameChannelHandlers,
 ): RealtimeChannel {
   const channel = supabase
-    .channel(`game:${gameId}`)
+    .channel(`game:${gameId}`, {
+      config: {
+        presence: { key: userId },
+      },
+    })
     .on(
       "postgres_changes",
       {
@@ -40,7 +48,22 @@ export function subscribeToGame(
         handlers.onGameUpdate(payload.new as GameRow);
       },
     )
-    .subscribe();
+    .on("presence", { event: "sync" }, () => {
+      const state = channel.presenceState<{ userId: string }>();
+      const ids = Object.keys(state);
+      handlers.onPresenceSync?.(ids);
+    })
+    .on("presence", { event: "join" }, ({ key }) => {
+      handlers.onPresenceJoin?.(key);
+    })
+    .on("presence", { event: "leave" }, ({ key }) => {
+      handlers.onPresenceLeave?.(key);
+    })
+    .subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await channel.track({ userId });
+      }
+    });
 
   return channel;
 }

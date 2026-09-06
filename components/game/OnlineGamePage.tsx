@@ -4,25 +4,32 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Board, findKingSquare } from "@/components/board/Board";
+import { Clock } from "@/components/board/Clock";
+import { DisconnectBanner } from "@/components/board/DisconnectBanner";
+import { GameControls } from "@/components/board/GameControls";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
 import { createEngine, isPromotionMove } from "@/lib/chess/engine";
 import type { BoardOrientation, Promotion, Square } from "@/lib/chess/types";
 import {
   displayColor,
-  endReasonLabel,
   squaresToUci,
 } from "@/lib/chess/types";
 import { createClient } from "@/lib/supabase/client";
-import { submitMove } from "@/lib/supabase/functions";
+import { claimResult, submitMove } from "@/lib/supabase/functions";
 import {
   fetchGame,
   fetchInviteCode,
   fetchMoves,
+  fetchServerNow,
   gameResultLabel,
+  touchPresence,
 } from "@/lib/supabase/games";
 import { subscribeToGame, unsubscribeFromGame } from "@/lib/supabase/realtime";
 import type { GameRow, MoveRow } from "@/types/game";
+
+const GRACE_MS = 30_000;
+const HEARTBEAT_MS = 10_000;
 
 type OnlineGamePageProps = {
   gameId: string;
@@ -32,6 +39,24 @@ type PendingPromotion = {
   from: Square;
   to: Square;
 };
+
+function opponentSeenAt(game: GameRow, userId: string): string | null {
+  return userId === game.white_id ? game.black_seen_at : game.white_seen_at;
+}
+
+function disconnectSecondsLeft(
+  game: GameRow,
+  userId: string,
+  clockOffsetMs: number,
+): number | null {
+  const seen = opponentSeenAt(game, userId) ?? game.started_at;
+  if (!seen) {
+    return null;
+  }
+  const serverNow = Date.now() + clockOffsetMs;
+  const remaining = GRACE_MS - (serverNow - Date.parse(seen));
+  return Math.max(0, Math.ceil(remaining / 1000));
+}
 
 export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
   const supabase = useMemo(() => createClient(), []);
@@ -46,12 +71,23 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     useState<PendingPromotion | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [notFoundGame, setNotFoundGame] = useState(false);
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [clockOffsetMs, setClockOffsetMs] = useState(0);
+  const [opponentPresent, setOpponentPresent] = useState(true);
+  const [presenceReady, setPresenceReady] = useState(false);
+  const [disconnectSeconds, setDisconnectSeconds] = useState<number | null>(null);
 
   const confirmedPlyRef = useRef(0);
   const submittingRef = useRef(false);
+  const claimingRef = useRef(false);
+  const gameRef = useRef<GameRow | null>(null);
+
+  useEffect(() => {
+    gameRef.current = game;
+  }, [game]);
 
   const orientation: BoardOrientation = useMemo(() => {
     if (!game || !userId) {
@@ -84,6 +120,8 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     return turnId === userId;
   }, [engine.turn, game, userId]);
 
+  const hasClock = (game?.initial_ms ?? 0) > 0;
+
   const syncFromServer = useCallback(
     async (nextGame: GameRow, nextMoves: MoveRow[]) => {
       const nextEngine = createEngine(nextGame.current_fen);
@@ -98,10 +136,13 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
   );
 
   const resync = useCallback(async () => {
-    const [nextGame, nextMoves] = await Promise.all([
+    const [nextGame, nextMoves, serverNow] = await Promise.all([
       fetchGame(supabase, gameId),
       fetchMoves(supabase, gameId),
+      fetchServerNow(supabase),
     ]);
+
+    setClockOffsetMs(serverNow - Date.now());
 
     if (!nextGame) {
       setNotFoundGame(true);
@@ -116,6 +157,32 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     }
   }, [gameId, supabase, syncFromServer]);
 
+  const runClaim = useCallback(
+    async (claim: "resign" | "timeout" | "disconnect" | "draw_offer" | "draw_accept" | "draw_decline") => {
+      if (claimingRef.current) {
+        return;
+      }
+      claimingRef.current = true;
+      try {
+        const result = await claimResult(gameId, claim);
+        if (!result.ok) {
+          if (result.error !== "grace_period_active" && result.error !== "opponent_has_time") {
+            setStatusMessage(result.error.replaceAll("_", " "));
+          }
+          await resync();
+          return;
+        }
+        await resync();
+      } catch {
+        setStatusMessage("Claim failed — try again.");
+        await resync();
+      } finally {
+        claimingRef.current = false;
+      }
+    },
+    [gameId, resync],
+  );
+
   useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
@@ -125,48 +192,59 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
     async function load() {
       setLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      setLoadError(null);
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user || cancelled) {
-        return;
-      }
+        if (!user || cancelled) {
+          return;
+        }
 
-      setUserId(user.id);
+        setUserId(user.id);
 
-      const [nextGame, nextMoves] = await Promise.all([
-        fetchGame(supabase, gameId),
-        fetchMoves(supabase, gameId),
-      ]);
+        const [nextGame, nextMoves, serverNow] = await Promise.all([
+          fetchGame(supabase, gameId),
+          fetchMoves(supabase, gameId),
+          fetchServerNow(supabase),
+        ]);
 
-      if (cancelled) {
-        return;
-      }
+        if (cancelled) {
+          return;
+        }
 
-      if (!nextGame) {
-        setNotFoundGame(true);
+        setClockOffsetMs(serverNow - Date.now());
+
+        if (!nextGame) {
+          setNotFoundGame(true);
+          setLoading(false);
+          return;
+        }
+
+        if (user.id !== nextGame.white_id && user.id !== nextGame.black_id) {
+          setNotFoundGame(true);
+          setLoading(false);
+          return;
+        }
+
+        await syncFromServer(nextGame, nextMoves);
+
+        if (nextGame.status === "waiting") {
+          const code = await fetchInviteCode(supabase, gameId);
+          setInviteCode(code);
+        }
+
         setLoading(false);
-        return;
-      }
-
-      if (
-        user.id !== nextGame.white_id &&
-        user.id !== nextGame.black_id
-      ) {
-        setNotFoundGame(true);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        const message =
+          error instanceof Error ? error.message : "Could not load game.";
+        setLoadError(message);
         setLoading(false);
-        return;
       }
-
-      await syncFromServer(nextGame, nextMoves);
-
-      if (nextGame.status === "waiting") {
-        const code = await fetchInviteCode(supabase, gameId);
-        setInviteCode(code);
-      }
-
-      setLoading(false);
     }
 
     void load();
@@ -189,31 +267,89 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     };
   }, [resync]);
 
+  // Presence + heartbeats + postgres sync
   useEffect(() => {
-    if (!game || loading) {
+    if (!game || !userId || loading) {
       return;
     }
 
-    const channel = subscribeToGame(supabase, gameId, {
+    const opponentId =
+      userId === game.white_id ? game.black_id : game.white_id;
+
+    const channel = subscribeToGame(supabase, gameId, userId, {
       onMove: (move) => {
         if (move.ply <= confirmedPlyRef.current) {
           return;
         }
         void resync();
       },
-      onGameUpdate: (updatedGame) => {
-        if (updatedGame.status === "finished") {
-          void resync();
-        } else if (updatedGame.status === "active" && game.status === "waiting") {
-          void resync();
+      onGameUpdate: () => {
+        void resync();
+      },
+      onPresenceSync: (ids) => {
+        setPresenceReady(true);
+        if (!opponentId) {
+          setOpponentPresent(true);
+          return;
+        }
+        setOpponentPresent(ids.includes(opponentId));
+      },
+      onPresenceJoin: (joinedId) => {
+        if (joinedId === opponentId) {
+          setOpponentPresent(true);
+        }
+      },
+      onPresenceLeave: (leftId) => {
+        if (leftId === opponentId) {
+          setOpponentPresent(false);
         }
       },
     });
 
+    setPresenceReady(false);
+    void touchPresence(supabase, gameId).catch(() => undefined);
+    const heartbeat = window.setInterval(() => {
+      void touchPresence(supabase, gameId).catch(() => undefined);
+    }, HEARTBEAT_MS);
+
     return () => {
+      window.clearInterval(heartbeat);
       unsubscribeFromGame(supabase, channel);
     };
-  }, [game, gameId, loading, resync, supabase]);
+  }, [game?.id, game?.white_id, game?.black_id, gameId, loading, resync, supabase, userId]);
+
+  // Disconnect countdown derived from seen_at so refresh stays correct
+  useEffect(() => {
+    if (!game || !userId || game.status !== "active" || !game.black_id) {
+      setDisconnectSeconds(null);
+      return;
+    }
+
+    if (!presenceReady || opponentPresent) {
+      setDisconnectSeconds(null);
+      return;
+    }
+
+    function tick() {
+      const current = gameRef.current;
+      if (!current || !userId) {
+        return;
+      }
+      const seconds = disconnectSecondsLeft(current, userId, clockOffsetMs);
+      if (seconds === null) {
+        setDisconnectSeconds(null);
+        return;
+      }
+      setDisconnectSeconds(seconds);
+      if (seconds <= 0 && !claimingRef.current) {
+        void runClaim("disconnect");
+      }
+    }
+
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [clockOffsetMs, game, opponentPresent, presenceReady, runClaim, userId]);
 
   const commitMove = useCallback(
     async (from: Square, to: Square, promotion?: Promotion) => {
@@ -250,23 +386,9 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
         return;
       }
 
-      confirmedPlyRef.current = result.ply;
-      const nextMoves = await fetchMoves(supabase, gameId);
-      setMoves(nextMoves);
-      setGame((current) =>
-        current
-          ? {
-              ...current,
-              ply: result.ply,
-              current_fen: result.fen,
-              status: result.status,
-              result: result.result ?? current.result,
-              reason: result.reason ?? current.reason,
-            }
-          : current,
-      );
+      await resync();
     },
-    [engine.fen, game, gameId, isMyTurn, resync, supabase],
+    [engine.fen, game, gameId, isMyTurn, resync],
   );
 
   const handleSquareTap = useCallback(
@@ -318,8 +440,38 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     window.setTimeout(() => setCopied(false), 2000);
   }, [inviteCode]);
 
+  const handleOpponentFlag = useCallback(() => {
+    if (!isMyTurn) {
+      void runClaim("timeout");
+    }
+  }, [isMyTurn, runClaim]);
+
   if (notFoundGame) {
     notFound();
+  }
+
+  if (loadError) {
+    return (
+      <main className="min-h-screen bg-stone-100 px-4 py-12">
+        <div className="mx-auto max-w-md rounded-lg border border-red-200 bg-white p-6 text-sm">
+          <h1 className="text-lg font-semibold text-stone-900">Could not load game</h1>
+          <p className="mt-2 text-red-700" role="alert">
+            {loadError}
+          </p>
+          <p className="mt-4 text-stone-600">
+            If you just added Phase 4, run{" "}
+            <code className="rounded bg-stone-100 px-1">supabase db push</code>{" "}
+            and redeploy the Edge Functions.
+          </p>
+          <Link
+            href="/play"
+            className="mt-4 inline-block text-stone-700 underline-offset-2 hover:underline"
+          >
+            Back to play menu
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   if (loading || !game || !userId) {
@@ -330,18 +482,29 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     );
   }
 
+  const whiteActive =
+    game.status === "active" && engine.turn === "w";
+  const blackActive =
+    game.status === "active" && engine.turn === "b";
+
   let headerText = "";
   if (game.status === "waiting") {
     headerText = "Waiting for opponent…";
-  } else if (game.status === "finished") {
+  } else if (game.status === "finished" || game.status === "abandoned") {
     headerText =
-      gameResultLabel(game.result, game.reason, userId, game.white_id) ??
-      "Game over";
+      game.status === "abandoned"
+        ? "Game abandoned"
+        : gameResultLabel(game.result, game.reason, userId, game.white_id) ??
+          "Game over";
   } else if (isMyTurn) {
     headerText = `Your turn${engine.inCheck ? " — Check!" : ""}`;
   } else {
     headerText = `Opponent's turn (${displayColor(engine.turn)})`;
   }
+
+  const drawFromMe = game.draw_offer_by === userId;
+  const drawFromOpponent =
+    game.draw_offer_by !== null && game.draw_offer_by !== userId;
 
   return (
     <main className="min-h-screen bg-stone-100 px-4 py-8">
@@ -373,28 +536,63 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
             </div>
           )}
 
-          {game.status !== "waiting" && (
-            <Board
-              pieces={engine.board}
-              orientation={orientation}
-              selectedSquare={selectedSquare}
-              legalTargets={legalTargets}
-              inCheckSquare={inCheckSquare}
-              onSquareTap={handleSquareTap}
-            />
+          {disconnectSeconds !== null && game.status === "active" && (
+            <DisconnectBanner secondsLeft={disconnectSeconds} />
           )}
 
-          {game.status === "finished" && game.reason && (
-            <p className="text-sm text-stone-600">
-              {endReasonLabel(
-                game.reason as
-                  | "checkmate"
-                  | "stalemate"
-                  | "threefold"
-                  | "fifty_move"
-                  | "insufficient_material",
+          {game.status !== "waiting" && (
+            <>
+              <Clock
+                label={orientation === "white" ? "Black" : "White"}
+                storedMs={orientation === "white" ? game.black_ms : game.white_ms}
+                lastMoveAt={game.last_move_at}
+                isActive={orientation === "white" ? blackActive : whiteActive}
+                clockOffsetMs={clockOffsetMs}
+                hasClock={hasClock}
+                onFlag={
+                  (orientation === "white" ? blackActive : whiteActive) &&
+                  userId !== (orientation === "white" ? game.black_id : game.white_id)
+                    ? handleOpponentFlag
+                    : undefined
+                }
+              />
+
+              <Board
+                pieces={engine.board}
+                orientation={orientation}
+                selectedSquare={selectedSquare}
+                legalTargets={legalTargets}
+                inCheckSquare={inCheckSquare}
+                onSquareTap={handleSquareTap}
+              />
+
+              <Clock
+                label={orientation === "white" ? "White" : "Black"}
+                storedMs={orientation === "white" ? game.white_ms : game.black_ms}
+                lastMoveAt={game.last_move_at}
+                isActive={orientation === "white" ? whiteActive : blackActive}
+                clockOffsetMs={clockOffsetMs}
+                hasClock={hasClock}
+                onFlag={
+                  (orientation === "white" ? whiteActive : blackActive) &&
+                  userId !== (orientation === "white" ? game.white_id : game.black_id)
+                    ? handleOpponentFlag
+                    : undefined
+                }
+              />
+
+              {game.status === "active" && (
+                <GameControls
+                  canAct
+                  drawOfferPendingFromOpponent={drawFromOpponent}
+                  drawOfferPendingFromMe={drawFromMe}
+                  onResign={() => void runClaim("resign")}
+                  onOfferDraw={() => void runClaim("draw_offer")}
+                  onAcceptDraw={() => void runClaim("draw_accept")}
+                  onDeclineDraw={() => void runClaim("draw_decline")}
+                />
               )}
-            </p>
+            </>
           )}
 
           <Link
