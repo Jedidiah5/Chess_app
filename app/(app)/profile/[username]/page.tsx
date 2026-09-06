@@ -3,6 +3,12 @@ import { notFound } from "next/navigation";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { getProfileByUsername } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
+import {
+  currentStreak,
+  fetchHeadToHead,
+  fetchPlayerGames,
+  winRate,
+} from "@/lib/supabase/stats";
 import { isOnboarded } from "@/types/profile";
 
 type ProfilePageProps = {
@@ -24,6 +30,17 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   } = await supabase.auth.getUser();
 
   const isOwnProfile = user?.id === profile.id;
+  const rate = winRate(profile);
+
+  const ratedGames = await fetchPlayerGames(supabase, profile.id, {
+    includeUnrated: false,
+  });
+  const streak = currentStreak(ratedGames, profile.id);
+
+  let h2h = null;
+  if (user && !isOwnProfile) {
+    h2h = await fetchHeadToHead(supabase, user.id, profile.id);
+  }
 
   return (
     <main className="min-h-screen bg-stone-100 px-4 py-12">
@@ -91,8 +108,21 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         </dl>
 
         <p className="mt-4 text-sm text-stone-500">
-          {profile.games_played} rated games played
+          {profile.games_played} rated games
+          {rate !== null ? ` · ${rate}% win rate` : ""}
+          {streak.type && streak.count > 0
+            ? ` · ${streak.count}${streak.type} streak`
+            : ""}
         </p>
+
+        {h2h && h2h.total > 0 && (
+          <div className="mt-6 rounded-md border border-stone-200 bg-stone-50 p-4 text-sm">
+            <p className="font-medium text-stone-800">Head-to-head</p>
+            <p className="mt-1 text-stone-600">
+              {h2h.wins}W · {h2h.losses}L · {h2h.draws}D ({h2h.total} games)
+            </p>
+          </div>
+        )}
 
         <div className="mt-8 flex flex-wrap gap-3">
           {isOwnProfile && (
@@ -101,6 +131,20 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               className="rounded-md bg-stone-800 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
             >
               Play
+            </Link>
+          )}
+          <Link
+            href="/leaderboard"
+            className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 hover:bg-stone-50"
+          >
+            Leaderboard
+          </Link>
+          {isOwnProfile && (
+            <Link
+              href="/games"
+              className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 hover:bg-stone-50"
+            >
+              Archive
             </Link>
           )}
           <Link

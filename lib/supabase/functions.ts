@@ -52,6 +52,12 @@ export async function createGame(
   return invokeFunction<CreateGameResponse>("create-game", { timeControl });
 }
 
+export async function createRematch(
+  rematchOf: string,
+): Promise<CreateGameResponse> {
+  return invokeFunction<CreateGameResponse>("create-game", { rematchOf });
+}
+
 export async function acceptInvite(code: string): Promise<AcceptInviteResponse> {
   return invokeFunction<AcceptInviteResponse>("accept-invite", { code });
 }

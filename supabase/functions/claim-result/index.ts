@@ -1,4 +1,5 @@
 import { getTurnFromFen } from "../_shared/chess/engine.ts";
+import { finaliseGame } from "../_shared/finalise.ts";
 import {
   errorResponse,
   getServiceClient,
@@ -81,10 +82,6 @@ Deno.serve(async (req) => {
 
   const row = game as GameRow;
 
-  if (row.status !== "active") {
-    return errorResponse("game_not_active");
-  }
-
   if (user.id !== row.white_id && user.id !== row.black_id) {
     return errorResponse("not_a_player");
   }
@@ -96,28 +93,43 @@ Deno.serve(async (req) => {
   const isWhite = user.id === row.white_id;
   const opponentId = isWhite ? row.black_id : row.white_id;
 
+  // Ending claims are idempotent via finaliseGame; non-ending claims need active.
+  if (
+    claim !== "resign" &&
+    claim !== "timeout" &&
+    claim !== "disconnect" &&
+    claim !== "draw_accept" &&
+    row.status !== "active"
+  ) {
+    return errorResponse("game_not_active");
+  }
+
   if (claim === "resign") {
-    const result = isWhite ? "black" : "white";
-    const { error } = await db
-      .from("games")
-      .update({
-        status: "finished",
-        result,
-        reason: "resignation",
-        ended_at: new Date().toISOString(),
-        draw_offer_by: null,
-      })
-      .eq("id", row.id)
-      .eq("status", "active");
-
-    if (error) {
-      return errorResponse("claim_failed", 500);
+    if (row.status !== "active" && row.status !== "finished") {
+      return errorResponse("game_not_active");
     }
-
-    return jsonResponse({ ok: true, result, reason: "resignation" });
+    const result = isWhite ? "black" : "white";
+    const finalised = await finaliseGame(db, {
+      gameId: row.id,
+      result,
+      reason: "resignation",
+    });
+    if (!finalised.ok) {
+      return errorResponse(finalised.error, 500);
+    }
+    return jsonResponse({
+      ok: true,
+      result: finalised.result,
+      reason: finalised.reason,
+      white_rating_delta: finalised.whiteRatingDelta,
+      black_rating_delta: finalised.blackRatingDelta,
+    });
   }
 
   if (claim === "timeout") {
+    if (row.status !== "active" && row.status !== "finished") {
+      return errorResponse("game_not_active");
+    }
     if (row.initial_ms <= 0) {
       return errorResponse("no_clock");
     }
@@ -131,7 +143,7 @@ Deno.serve(async (req) => {
     }
 
     const turnId = turn === "w" ? row.white_id : row.black_id;
-    if (turnId === user.id) {
+    if (turnId === user.id && row.status === "active") {
       return errorResponse("not_opponent_turn");
     }
 
@@ -140,65 +152,74 @@ Deno.serve(async (req) => {
     const elapsed = Date.now() - Date.parse(row.last_move_at);
     const remaining = storedMs - elapsed;
 
-    if (remaining > 0) {
+    if (row.status === "active" && remaining > 0) {
       return errorResponse("opponent_has_time");
     }
 
     const result = opponentIsWhite ? "black" : "white";
-    const { error } = await db
-      .from("games")
-      .update({
-        status: "finished",
-        result,
-        reason: "timeout",
-        ended_at: new Date().toISOString(),
-        draw_offer_by: null,
-        white_ms: opponentIsWhite ? 0 : row.white_ms,
-        black_ms: opponentIsWhite ? row.black_ms : 0,
-      })
-      .eq("id", row.id)
-      .eq("status", "active");
+    const finalised = await finaliseGame(db, {
+      gameId: row.id,
+      result,
+      reason: "timeout",
+      whiteMs: opponentIsWhite ? 0 : row.white_ms,
+      blackMs: opponentIsWhite ? row.black_ms : 0,
+    });
 
-    if (error) {
-      return errorResponse("claim_failed", 500);
+    if (!finalised.ok) {
+      return errorResponse(finalised.error, 500);
     }
 
-    return jsonResponse({ ok: true, result, reason: "timeout" });
+    return jsonResponse({
+      ok: true,
+      result: finalised.result,
+      reason: finalised.reason,
+      white_rating_delta: finalised.whiteRatingDelta,
+      black_rating_delta: finalised.blackRatingDelta,
+    });
   }
 
   if (claim === "disconnect") {
-    const opponentSeenAt = isWhite ? row.black_seen_at : row.white_seen_at;
-    const baseline = opponentSeenAt ?? row.started_at;
-    if (!baseline) {
-      return errorResponse("grace_period_active");
+    if (row.status !== "active" && row.status !== "finished") {
+      return errorResponse("game_not_active");
     }
 
-    const silentFor = Date.now() - Date.parse(baseline);
-    if (silentFor < GRACE_MS) {
-      return errorResponse("grace_period_active");
+    if (row.status === "active") {
+      const opponentSeenAt = isWhite ? row.black_seen_at : row.white_seen_at;
+      const baseline = opponentSeenAt ?? row.started_at;
+      if (!baseline) {
+        return errorResponse("grace_period_active");
+      }
+
+      const silentFor = Date.now() - Date.parse(baseline);
+      if (silentFor < GRACE_MS) {
+        return errorResponse("grace_period_active");
+      }
     }
 
     const result = isWhite ? "white" : "black";
-    const { error } = await db
-      .from("games")
-      .update({
-        status: "finished",
-        result,
-        reason: "disconnect",
-        ended_at: new Date().toISOString(),
-        draw_offer_by: null,
-      })
-      .eq("id", row.id)
-      .eq("status", "active");
+    const finalised = await finaliseGame(db, {
+      gameId: row.id,
+      result,
+      reason: "disconnect",
+    });
 
-    if (error) {
-      return errorResponse("claim_failed", 500);
+    if (!finalised.ok) {
+      return errorResponse(finalised.error, 500);
     }
 
-    return jsonResponse({ ok: true, result, reason: "disconnect" });
+    return jsonResponse({
+      ok: true,
+      result: finalised.result,
+      reason: finalised.reason,
+      white_rating_delta: finalised.whiteRatingDelta,
+      black_rating_delta: finalised.blackRatingDelta,
+    });
   }
 
   if (claim === "draw_offer") {
+    if (row.status !== "active") {
+      return errorResponse("game_not_active");
+    }
     if (row.draw_offer_by === user.id) {
       return jsonResponse({ ok: true, result: null, reason: null });
     }
@@ -217,36 +238,41 @@ Deno.serve(async (req) => {
   }
 
   if (claim === "draw_accept") {
-    if (!row.draw_offer_by) {
-      return errorResponse("no_draw_offer");
-    }
-    if (row.draw_offer_by === user.id) {
-      return errorResponse("cannot_accept_own_offer");
-    }
-    if (row.draw_offer_by !== opponentId) {
-      return errorResponse("no_draw_offer");
-    }
-
-    const { error } = await db
-      .from("games")
-      .update({
-        status: "finished",
-        result: "draw",
-        reason: "agreement",
-        ended_at: new Date().toISOString(),
-        draw_offer_by: null,
-      })
-      .eq("id", row.id)
-      .eq("status", "active");
-
-    if (error) {
-      return errorResponse("claim_failed", 500);
+    if (row.status === "active") {
+      if (!row.draw_offer_by) {
+        return errorResponse("no_draw_offer");
+      }
+      if (row.draw_offer_by === user.id) {
+        return errorResponse("cannot_accept_own_offer");
+      }
+      if (row.draw_offer_by !== opponentId) {
+        return errorResponse("no_draw_offer");
+      }
     }
 
-    return jsonResponse({ ok: true, result: "draw", reason: "agreement" });
+    const finalised = await finaliseGame(db, {
+      gameId: row.id,
+      result: "draw",
+      reason: "agreement",
+    });
+
+    if (!finalised.ok) {
+      return errorResponse(finalised.error, 500);
+    }
+
+    return jsonResponse({
+      ok: true,
+      result: finalised.result,
+      reason: finalised.reason,
+      white_rating_delta: finalised.whiteRatingDelta,
+      black_rating_delta: finalised.blackRatingDelta,
+    });
   }
 
   if (claim === "draw_decline") {
+    if (row.status !== "active") {
+      return errorResponse("game_not_active");
+    }
     if (!row.draw_offer_by) {
       return errorResponse("no_draw_offer");
     }

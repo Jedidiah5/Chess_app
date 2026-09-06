@@ -25,6 +25,7 @@ import {
   gameResultLabel,
   touchPresence,
 } from "@/lib/supabase/games";
+import { RematchButton } from "@/components/game/RematchButton";
 import { subscribeToGame, unsubscribeFromGame } from "@/lib/supabase/realtime";
 import type { GameRow, MoveRow } from "@/types/game";
 
@@ -593,6 +594,15 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
                 />
               )}
             </>
+          )}
+
+          {game.status === "finished" && (
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-stone-600">
+                {gameResultLabel(game.result, game.reason, userId, game.white_id)}
+              </p>
+              <RematchButton gameId={game.id} />
+            </div>
           )}
 
           <Link

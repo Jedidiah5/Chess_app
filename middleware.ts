@@ -25,6 +25,12 @@ function isAppPath(pathname: string): boolean {
   if (pathname.startsWith("/join/")) {
     return true;
   }
+  if (pathname === "/leaderboard" || pathname.startsWith("/leaderboard/")) {
+    return true;
+  }
+  if (pathname === "/games" || pathname.startsWith("/games/")) {
+    return true;
+  }
   return false;
 }
 

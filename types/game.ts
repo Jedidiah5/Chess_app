@@ -59,7 +59,7 @@ export type FunctionError = {
 };
 
 export type CreateGameResponse =
-  | { ok: true; gameId: string; inviteCode: string }
+  | { ok: true; gameId: string; inviteCode: string | null }
   | FunctionError;
 
 export type AcceptInviteResponse =

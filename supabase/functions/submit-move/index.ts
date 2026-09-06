@@ -1,4 +1,5 @@
 import { getTurnFromFen, tryMoveUci } from "../_shared/chess/engine.ts";
+import { finaliseGame } from "../_shared/finalise.ts";
 import { mapTerminalToDb } from "../_shared/terminal.ts";
 import {
   errorResponse,
@@ -21,8 +22,6 @@ type GameRow = {
   current_fen: string;
   ply: number;
   status: string;
-  result: string | null;
-  reason: string | null;
   initial_ms: number;
   increment_ms: number;
   white_ms: number;
@@ -101,7 +100,6 @@ Deno.serve(async (req) => {
     return errorResponse("illegal_move");
   }
 
-  // Clock — elapsed from server last_move_at only. Never trust the request body.
   const isWhite = user.id === row.white_id;
   let whiteMs = row.white_ms;
   let blackMs = row.black_ms;
@@ -118,22 +116,16 @@ Deno.serve(async (req) => {
 
     if (msLeft <= 0) {
       const winner = isWhite ? "black" : "white";
-      const { error: timeoutError } = await db
-        .from("games")
-        .update({
-          status: "finished",
-          result: winner,
-          reason: "timeout",
-          ended_at: new Date().toISOString(),
-          draw_offer_by: null,
-          white_ms: isWhite ? 0 : whiteMs,
-          black_ms: isWhite ? blackMs : 0,
-        })
-        .eq("id", row.id)
-        .eq("status", "active");
+      const finalised = await finaliseGame(db, {
+        gameId: row.id,
+        result: winner,
+        reason: "timeout",
+        whiteMs: isWhite ? 0 : whiteMs,
+        blackMs: isWhite ? blackMs : 0,
+      });
 
-      if (timeoutError) {
-        return errorResponse("timeout_finalise_failed", 500);
+      if (!finalised.ok) {
+        return errorResponse(finalised.error, 500);
       }
 
       return jsonResponse({
@@ -141,10 +133,12 @@ Deno.serve(async (req) => {
         fen: row.current_fen,
         ply: row.ply,
         status: "finished",
-        result: winner,
-        reason: "timeout",
+        result: finalised.result,
+        reason: finalised.reason,
         white_ms: isWhite ? 0 : whiteMs,
         black_ms: isWhite ? blackMs : 0,
+        white_rating_delta: finalised.whiteRatingDelta,
+        black_rating_delta: finalised.blackRatingDelta,
       });
     }
 
@@ -177,15 +171,39 @@ Deno.serve(async (req) => {
     return errorResponse("apply_failed", 500);
   }
 
+  if (terminal) {
+    const finalised = await finaliseGame(db, {
+      gameId: row.id,
+      result: terminal.result,
+      reason: terminal.reason,
+      whiteMs,
+      blackMs,
+    });
+
+    if (!finalised.ok) {
+      return errorResponse(finalised.error, 500);
+    }
+
+    return jsonResponse({
+      ok: true,
+      fen: moveResult.fen,
+      ply: newPly,
+      status: "finished",
+      result: finalised.result,
+      reason: finalised.reason,
+      white_ms: whiteMs,
+      black_ms: blackMs,
+      white_rating_delta: finalised.whiteRatingDelta,
+      black_rating_delta: finalised.blackRatingDelta,
+    });
+  }
+
   return jsonResponse({
     ok: true,
     fen: moveResult.fen,
     ply: newPly,
-    status,
+    status: "active",
     white_ms: whiteMs,
     black_ms: blackMs,
-    ...(terminal
-      ? { result: terminal.result, reason: terminal.reason }
-      : {}),
   });
 });

@@ -28,6 +28,15 @@ export default function PlayPage() {
             Two players on one device. No account needed.
           </p>
         </Link>
+
+        <div className="flex justify-center gap-4 pt-2 text-sm">
+          <Link href="/leaderboard" className="text-stone-700 underline-offset-2 hover:underline">
+            Leaderboard
+          </Link>
+          <Link href="/games" className="text-stone-700 underline-offset-2 hover:underline">
+            Archive
+          </Link>
+        </div>
       </div>
     </main>
   );

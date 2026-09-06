@@ -11,7 +11,7 @@ import {
 
 type CreateGameBody = {
   timeControl?: TimeControl;
-  color?: "white" | "black" | "random";
+  rematchOf?: string;
 };
 
 Deno.serve(async (req) => {
@@ -36,20 +36,74 @@ Deno.serve(async (req) => {
     return errorResponse("invalid_json");
   }
 
+  const db = getServiceClient();
+
+  if (body.rematchOf) {
+    const { data: prior, error: priorError } = await db
+      .from("games")
+      .select(
+        "id, white_id, black_id, status, initial_ms, increment_ms, rated",
+      )
+      .eq("id", body.rematchOf)
+      .single();
+
+    if (priorError || !prior) {
+      return errorResponse("game_not_found", 404);
+    }
+
+    if (prior.status !== "finished") {
+      return errorResponse("game_not_finished");
+    }
+
+    if (!prior.black_id) {
+      return errorResponse("game_incomplete");
+    }
+
+    if (user.id !== prior.white_id && user.id !== prior.black_id) {
+      return errorResponse("not_a_player");
+    }
+
+    const now = new Date().toISOString();
+    // Colours swapped relative to the finished game.
+    const { data: game, error: gameError } = await db
+      .from("games")
+      .insert({
+        white_id: prior.black_id,
+        black_id: prior.white_id,
+        status: "active",
+        rated: true,
+        initial_ms: prior.initial_ms,
+        increment_ms: prior.increment_ms,
+        white_ms: prior.initial_ms,
+        black_ms: prior.initial_ms,
+        started_at: now,
+        last_move_at: now,
+        white_seen_at: now,
+        black_seen_at: now,
+      })
+      .select("id")
+      .single();
+
+    if (gameError || !game) {
+      return errorResponse("create_failed", 500);
+    }
+
+    return jsonResponse({ ok: true, gameId: game.id, inviteCode: null });
+  }
+
   const timeControl = body.timeControl ?? "untimed";
   if (timeControl !== "blitz" && timeControl !== "rapid" && timeControl !== "untimed") {
     return errorResponse("invalid_time_control");
   }
 
   const { initialMs, incrementMs } = resolveTimeControl(timeControl);
-  const db = getServiceClient();
 
   const { data: game, error: gameError } = await db
     .from("games")
     .insert({
       white_id: user.id,
       status: "waiting",
-      rated: false,
+      rated: true,
       initial_ms: initialMs,
       increment_ms: incrementMs,
       white_ms: initialMs,
