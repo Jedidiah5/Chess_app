@@ -9,7 +9,12 @@ import { DisconnectBanner } from "@/components/board/DisconnectBanner";
 import { GameControls } from "@/components/board/GameControls";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
-import { createEngine, isPromotionMove } from "@/lib/chess/engine";
+import {
+  buildAnimMoveFromCommit,
+  deriveAnimMove,
+  useMoveAnimator,
+} from "@/components/board/useMoveAnimator";
+import { createEngine, isPromotionMove, tryMoveUci } from "@/lib/chess/engine";
 import type { BoardOrientation, Promotion, Square } from "@/lib/chess/types";
 import {
   displayColor,
@@ -85,10 +90,17 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
   const submittingRef = useRef(false);
   const claimingRef = useRef(false);
   const gameRef = useRef<GameRow | null>(null);
+  const boardRef = useRef(engine.board);
+  const fenRef = useRef(engine.fen);
 
   useEffect(() => {
     gameRef.current = game;
   }, [game]);
+
+  useEffect(() => {
+    boardRef.current = engine.board;
+    fenRef.current = engine.fen;
+  }, [engine]);
 
   const orientation: BoardOrientation = useMemo(() => {
     if (!game || !userId) {
@@ -97,12 +109,15 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     return userId === game.white_id ? "white" : "black";
   }, [game, userId]);
 
+  const { motionPieces, busy, playMove, snapTo, setSelectedLift } =
+    useMoveAnimator({ orientation });
+
   const legalTargets = useMemo(() => {
-    if (!selectedSquare) {
+    if (!selectedSquare || busy) {
       return [];
     }
     return engine.legalMoves(selectedSquare);
-  }, [engine, selectedSquare]);
+  }, [engine, selectedSquare, busy]);
 
   const inCheckSquare = useMemo(() => {
     if (!engine.inCheck) {
@@ -125,15 +140,58 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
   const syncFromServer = useCallback(
     async (nextGame: GameRow, nextMoves: MoveRow[]) => {
+      const prevPly = confirmedPlyRef.current;
+      const prevBoard = boardRef.current;
+      const prevFen = fenRef.current;
       const nextEngine = createEngine(nextGame.current_fen);
+      const delta = nextGame.ply - prevPly;
+
       setGame(nextGame);
       setMoves(nextMoves);
       setEngine(nextEngine);
       setSelectedSquare(null);
       setPendingPromotion(null);
       confirmedPlyRef.current = nextGame.ply;
+
+      if (delta > 2 || delta < 0 || prevBoard.length === 0) {
+        snapTo(nextEngine.board, null);
+        return;
+      }
+
+      if (delta === 0) {
+        snapTo(nextEngine.board, null);
+        return;
+      }
+
+      const stepMoves = nextMoves
+        .filter((m) => m.ply > prevPly && m.ply <= nextGame.ply)
+        .sort((a, b) => a.ply - b.ply);
+
+      if (stepMoves.length === 0 || stepMoves.length > 2) {
+        snapTo(nextEngine.board, null);
+        return;
+      }
+
+      let fen = prevFen;
+      let board = prevBoard;
+      for (const step of stepMoves) {
+        const applied = tryMoveUci(fen, step.uci);
+        if (!applied.ok) {
+          snapTo(nextEngine.board, null);
+          return;
+        }
+        const afterEngine = createEngine(applied.fen);
+        const anim = deriveAnimMove(board, afterEngine.board);
+        if (!anim) {
+          snapTo(nextEngine.board, null);
+          return;
+        }
+        playMove(anim, afterEngine.board);
+        fen = applied.fen;
+        board = afterEngine.board;
+      }
     },
-    [],
+    [playMove, snapTo],
   );
 
   const resync = useCallback(async () => {
@@ -360,6 +418,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
       const expectedPly = game.ply;
       const uci = squaresToUci(from, to, promotion);
+      const prev = engine.board;
       const optimistic = createEngine(engine.fen);
       const localOutcome = optimistic.makeMove(from, to, promotion);
 
@@ -368,10 +427,18 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
       }
 
       submittingRef.current = true;
+      const anim = buildAnimMoveFromCommit(
+        prev,
+        from,
+        to,
+        optimistic.board,
+        promotion,
+      );
       setEngine(optimistic);
       setSelectedSquare(null);
       setPendingPromotion(null);
       setStatusMessage(null);
+      playMove(anim, optimistic.board);
 
       const result = await submitMove(gameId, uci, expectedPly);
 
@@ -389,12 +456,18 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
       await resync();
     },
-    [engine.fen, game, gameId, isMyTurn, resync],
+    [engine.board, engine.fen, game, gameId, isMyTurn, playMove, resync],
   );
 
   const handleSquareTap = useCallback(
     (square: Square) => {
-      if (!game || game.status !== "active" || !isMyTurn || submittingRef.current) {
+      if (
+        !game ||
+        game.status !== "active" ||
+        !isMyTurn ||
+        submittingRef.current ||
+        busy
+      ) {
         return;
       }
 
@@ -406,6 +479,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
       if (selectedSquare === square) {
         setSelectedSquare(null);
+        setSelectedLift(engine.board, null);
         return;
       }
 
@@ -423,12 +497,22 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
       if (piece && piece.color === engine.turn) {
         setSelectedSquare(square);
+        setSelectedLift(engine.board, square);
         return;
       }
 
       setSelectedSquare(null);
+      setSelectedLift(engine.board, null);
     },
-    [commitMove, engine, game, isMyTurn, selectedSquare],
+    [
+      busy,
+      commitMove,
+      engine,
+      game,
+      isMyTurn,
+      selectedSquare,
+      setSelectedLift,
+    ],
   );
 
   const handleCopyInvite = useCallback(async () => {
@@ -560,6 +644,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
               <Board
                 pieces={engine.board}
+                motionPieces={motionPieces}
                 orientation={orientation}
                 selectedSquare={selectedSquare}
                 legalTargets={legalTargets}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useId } from "react";
 import type { Color, PieceType } from "@/lib/chess/types";
 
 type PieceProps = {
@@ -11,83 +10,62 @@ type PieceProps = {
 };
 
 /**
- * Staunton-inspired silhouettes with a graphite/ink stroke.
+ * Engraved Staunton silhouettes with wobble baked into path geometry.
+ * No SVG filters — transform/opacity motion stays composite-only.
  */
 export function Piece({ type, color, size = 100, className }: PieceProps) {
-  const uid = useId().replace(/:/g, "");
-  const filterId = `${uid}-pencil`;
   const isWhite = color === "w";
-  const fill = isWhite ? "#f7f3ea" : "#2a2a28";
-  const stroke = isWhite ? "#2c2a26" : "#0f0e0c";
-  const accent = isWhite ? "#2c2a26" : "#ebe6dc";
 
   return (
     <svg
       viewBox="0 0 45 45"
       width={size}
       height={size}
-      className={["piece-svg overflow-visible", className].filter(Boolean).join(" ")}
+      className={[
+        "piece-svg overflow-visible",
+        isWhite ? "piece-w" : "piece-b",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-hidden="true"
     >
-      <defs>
-        <filter id={filterId} x="-15%" y="-15%" width="130%" height="130%">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.85"
-            numOctaves="2"
-            result="noise"
-            seed={type.charCodeAt(0) + (isWhite ? 1 : 7)}
-          />
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="noise"
-            scale="0.6"
-            xChannelSelector="R"
-            yChannelSelector="G"
-          />
-        </filter>
-      </defs>
       <g transform="translate(22.5 22.5) scale(1.18) translate(-22.5 -22.5)">
         <g
-          fill={fill}
-          stroke={stroke}
+          fill="currentColor"
+          stroke="var(--piece-stroke)"
           strokeWidth={1.2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          filter={`url(#${filterId})`}
         >
-          {renderShape(type, accent, isWhite, stroke)}
+          {renderShape(type, isWhite)}
         </g>
       </g>
     </svg>
   );
 }
 
-function renderShape(
-  type: PieceType,
-  accent: string,
-  isWhite: boolean,
-  stroke: string,
-) {
+/** Paths intentionally imperfect — engraving wobble baked in (was feDisplacementMap). */
+function renderShape(type: PieceType, isWhite: boolean) {
   switch (type) {
     case "p":
       return (
         <>
-          <path d="M22.5 11c-2.4 0-4.3 2-4.3 4.4 0 1.4.7 2.6 1.7 3.4-2.8 1-4.8 3.7-4.8 6.9v1.2h14.8V25.7c0-3.2-2-5.9-4.8-6.9 1-.8 1.7-2 1.7-3.4 0-2.4-1.9-4.4-4.3-4.4z" />
-          <path d="M14.5 28.8h16l1.2 3.4H13.3z" />
-          <path d="M12 33.4h21l.8 2.8c0 .8-.6 1.4-1.4 1.4H12.6c-.8 0-1.4-.6-1.4-1.4z" />
+          <path d="M22.4 10.85c-2.35.05-4.25 1.95-4.2 4.35.05 1.38.72 2.55 1.68 3.35-2.75.95-4.72 3.55-4.85 6.85v1.15h14.9l-.08-1.2c-.05-3.15-1.95-5.85-4.72-6.8.98-.82 1.68-1.95 1.65-3.35-.05-2.4-1.85-4.4-4.38-4.35z" />
+          <path d="M14.35 28.65h16.15l1.15 3.45H13.2z" />
+          <path d="M11.9 33.25h21.2l.75 2.85c.05.75-.55 1.35-1.35 1.4H12.55c-.82-.02-1.42-.62-1.38-1.42z" />
         </>
       );
     case "r":
       return (
         <>
-          <path d="M11.5 14.2h4.2v3.4h3.6V14.2h5.4v3.4h3.6V14.2h4.2v6.8H11.5z" />
-          <path d="M13.2 21.5h18.6v11.2H13.2z" />
-          <path d="M11.8 33.4h21.4v2.8c0 .8-.6 1.4-1.4 1.4H13.2c-.8 0-1.4-.6-1.4-1.4z" />
+          <path d="M11.35 14.05h4.35v3.45h3.45V13.95h5.55v3.55h3.5V14.1h4.15v6.7H11.4z" />
+          <path d="M13.05 21.35h18.85v11.35H13.1z" />
+          <path d="M11.65 33.25h21.65v2.85c.02.78-.55 1.42-1.35 1.45H13.05c-.8 0-1.42-.6-1.4-1.4z" />
           <path
-            d="M16.2 24.2h12.6M16.2 27.8h12.6M16.2 31.2h12.6"
+            d="M16.05 24.05h12.85M16.35 27.65h12.3M16.15 31.05h12.7"
             fill="none"
-            stroke={accent}
+            stroke="var(--piece-accent)"
             strokeWidth={1}
           />
         </>
@@ -95,14 +73,20 @@ function renderShape(
     case "n":
       return (
         <>
-          <path d="M13.5 36.2c0 .8.6 1.4 1.4 1.4h15.2c.8 0 1.4-.6 1.4-1.4v-1.6H13.5z" />
-          <path d="M14.2 32.8h16.6l.6-3.2c.4-2.2-.2-4.2-1.6-5.8-1.2-1.4-2-3.2-1.6-5.2.3-1.4 1.4-2.6 2.8-3.1l1.2-.4-1.4-1.8c-2.2 1-4.2 1.4-6.4.6-2.6-.9-4.4-2.8-6.2-5.1l-1.3 1.2c1.6 2.2 3.2 4 5.4 5.1-2.4 1.1-4.2 3.4-4.8 6.1-.6 2.6.1 5.2 1.6 7.2z" />
-          <circle cx="27.2" cy="18.4" r="1.15" fill={accent} stroke="none" />
+          <path d="M13.35 36.05c.02.82.58 1.45 1.42 1.48h15.1c.82-.02 1.42-.62 1.4-1.42v-1.55H13.4z" />
+          <path d="M14.05 32.65h16.85l.55-3.15c.35-2.15-.25-4.15-1.55-5.75-1.25-1.45-2.05-3.15-1.55-5.25.28-1.42 1.35-2.65 2.75-3.15l1.25-.35-1.45-1.85c-2.15 1.05-4.25 1.35-6.35.55-2.55-.95-4.45-2.75-6.25-5.05l-1.25 1.25c1.55 2.15 3.15 3.95 5.35 5.05-2.35 1.15-4.25 3.35-4.85 6.15-.55 2.55.15 5.15 1.65 7.15z" />
+          <circle
+            cx="27.35"
+            cy="18.25"
+            r="1.12"
+            fill="var(--piece-accent)"
+            stroke="none"
+          />
           {!isWhite && (
             <path
-              d="M16.8 28.4c1.8-2.4 4.2-3.6 7-3.2"
+              d="M16.65 28.25c1.85-2.35 4.25-3.55 7.15-3.05"
               fill="none"
-              stroke={accent}
+              stroke="var(--piece-accent)"
               strokeWidth={0.9}
               opacity={0.55}
             />
@@ -112,31 +96,31 @@ function renderShape(
     case "b":
       return (
         <>
-          <circle cx="22.5" cy="9.6" r="2.1" />
-          <path d="M22.5 12.4c-4.8 5.2-7.8 10.2-7.8 15.2 0 3.2 1.6 5.4 4.2 6.6h7.2c2.6-1.2 4.2-3.4 4.2-6.6 0-5-3-10-7.8-15.2z" />
+          <circle cx="22.55" cy="9.45" r="2.05" />
+          <path d="M22.55 12.25c-4.75 5.15-7.85 10.05-7.65 15.15.05 3.15 1.55 5.35 4.15 6.55h7.35c2.55-1.25 4.15-3.35 4.05-6.55-.15-5.05-3.05-10.15-7.9-15.15z" />
           <path
-            d="M18.8 22.2h7.4M22.5 16.4v11.2"
+            d="M18.65 22.05h7.65M22.35 16.25v11.35"
             fill="none"
-            stroke={accent}
+            stroke="var(--piece-accent)"
             strokeWidth={1.1}
           />
-          <path d="M14.2 35.2h16.6l1 1.6c.3.5 0 1.2-.6 1.2H13.8c-.6 0-.9-.7-.6-1.2z" />
-          <ellipse cx="22.5" cy="34.2" rx="9.2" ry="2.1" />
+          <path d="M14.05 35.05h16.85l.95 1.65c.28.48-.05 1.15-.58 1.18H13.65c-.55.02-.92-.65-.6-1.15z" />
+          <ellipse cx="22.45" cy="34.05" rx="9.35" ry="2.05" />
         </>
       );
     case "q":
       return (
         <>
-          <circle cx="12.2" cy="13.2" r="2" />
-          <circle cx="22.5" cy="9.4" r="2.15" />
-          <circle cx="32.8" cy="13.2" r="2" />
-          <path d="M12.4 15.4 15.8 30.8h13.4l3.4-15.4-5.6 6.2-4.5-8.2-4.5 8.2z" />
-          <path d="M15.2 31.6h14.6l.8 2.2H14.4z" />
-          <path d="M12.8 34.6h19.4v2.2c0 .7-.6 1.2-1.2 1.2H14c-.7 0-1.2-.5-1.2-1.2z" />
+          <circle cx="12.05" cy="13.05" r="2.05" />
+          <circle cx="22.55" cy="9.25" r="2.2" />
+          <circle cx="32.95" cy="13.15" r="1.95" />
+          <path d="M12.25 15.25 15.65 30.65h13.65l3.25-15.25-5.55 6.05-4.65-8.05-4.35 8.15z" />
+          <path d="M15.05 31.45h14.85l.75 2.25H14.25z" />
+          <path d="M12.65 34.45h19.65v2.25c0 .68-.55 1.15-1.15 1.18H13.85c-.68 0-1.18-.48-1.15-1.15z" />
           <path
-            d="M17.4 24.8h10.2M18.6 28.2h7.8"
+            d="M17.25 24.65h10.45M18.45 28.05h8.05"
             fill="none"
-            stroke={accent}
+            stroke="var(--piece-accent)"
             strokeWidth={0.95}
             opacity={0.7}
           />
@@ -146,18 +130,18 @@ function renderShape(
       return (
         <>
           <path
-            d="M22.5 7.2v5.6M19.8 10h5.4"
+            d="M22.55 7.05v5.75M19.65 9.85h5.65"
             fill="none"
-            stroke={isWhite ? stroke : accent}
+            stroke="var(--piece-accent)"
             strokeWidth={1.6}
           />
-          <path d="M14.2 15.6c2.4 2.2 5.2 3.4 8.3 3.4s5.9-1.2 8.3-3.4c.8 2.6.4 5.4-1.2 7.6-1.4 1.9-2.2 4-2.2 6.2v2.2H17.6v-2.2c0-2.2-.8-4.3-2.2-6.2-1.6-2.2-2-5-1.2-7.6z" />
-          <path d="M16.4 31.8h12.2l1 2.2H15.4z" />
-          <path d="M13.2 34.8h18.6v2.2c0 .7-.5 1.2-1.2 1.2H14.4c-.7 0-1.2-.5-1.2-1.2z" />
+          <path d="M14.05 15.45c2.45 2.15 5.25 3.35 8.45 3.25 3.15-.05 5.85-1.25 8.15-3.45.75 2.65.35 5.45-1.25 7.65-1.35 1.85-2.15 3.95-2.05 6.15v2.15H17.45v-2.25c.05-2.15-.75-4.25-2.15-6.15-1.55-2.15-1.95-4.95-1.25-7.35z" />
+          <path d="M16.25 31.65h12.45l.95 2.25H15.25z" />
+          <path d="M13.05 34.65h18.85v2.25c0 .68-.48 1.15-1.15 1.18H14.25c-.68 0-1.18-.48-1.15-1.15z" />
           <path
-            d="M18.2 21.4h8.6"
+            d="M18.05 21.25h8.85"
             fill="none"
-            stroke={accent}
+            stroke="var(--piece-accent)"
             strokeWidth={1}
             opacity={0.65}
           />

@@ -9,6 +9,8 @@ import {
   squareToCoords,
 } from "@/lib/chess/types";
 import { Piece } from "./Piece";
+import type { MotionPiece } from "./useMoveAnimator";
+import { TRAVEL_MS } from "./useMoveAnimator";
 
 type BoardProps = {
   pieces: BoardPiece[];
@@ -17,6 +19,8 @@ type BoardProps = {
   legalTargets: Square[];
   inCheckSquare: Square | null;
   onSquareTap: (square: Square) => void;
+  /** When set, renders animated motion pieces instead of raw `pieces`. */
+  motionPieces?: MotionPiece[] | null;
 };
 
 type DisplaySquare = {
@@ -69,6 +73,9 @@ function displayPosition(
   return { file: 7 - file, rank };
 }
 
+const DECKLE_PATH =
+  "M1.55 2.25 C 2.15 1.05, 7.8 1.55, 19.6 0.95 C 44.2 0.35, 54.8 1.85, 77.6 1.05 C 89.5 0.85, 96.9 2.15, 98.55 3.05 C 99.45 4.25, 98.55 11.6, 98.95 27.4 C 99.35 47.8, 98.25 57.6, 98.85 77.5 C 99.15 89.8, 97.85 96.6, 96.95 98.35 C 95.55 99.45, 87.6 98.35, 71.8 99.05 C 49.6 99.55, 39.8 98.15, 21.6 98.95 C 9.8 99.25, 2.15 98.05, 1.25 96.85 C 0.45 95.25, 1.45 87.6, 0.95 71.4 C 0.55 49.2, 1.75 39.4, 0.95 21.5 C 0.65 9.6, 0.85 3.45, 1.55 2.25 Z";
+
 export function Board({
   pieces,
   orientation,
@@ -76,11 +83,10 @@ export function Board({
   legalTargets,
   inCheckSquare,
   onSquareTap,
+  motionPieces = null,
 }: BoardProps) {
   const uid = useId().replace(/:/g, "");
-  const paper = `${uid}-paper`;
-  const wobble = `${uid}-wobble`;
-  const grain = `${uid}-grain`;
+  const hatchId = `${uid}-hatch`;
 
   const displaySquares = useMemo(
     () => buildDisplaySquares(orientation),
@@ -99,6 +105,31 @@ export function Board({
     [onSquareTap],
   );
 
+  const rendered: MotionPiece[] = useMemo(() => {
+    if (motionPieces) {
+      return motionPieces;
+    }
+    return pieces.map((p) => {
+      const { file, rank } = displayPosition(p.square, orientation);
+      const lifted = selectedSquare === p.square;
+      return {
+        key: `${p.color}${p.type}-${p.square}`,
+        type: p.type,
+        color: p.color,
+        file,
+        rank,
+        square: p.square,
+        opacity: 1,
+        scale: lifted ? 1.08 : 1,
+        rotateDeg: 0,
+        arcY: 0,
+        shadow: lifted ? 1 : 0,
+        zIndex: lifted ? 30 : 10,
+        interactive: true,
+      };
+    });
+  }, [motionPieces, pieces, orientation, selectedSquare]);
+
   return (
     <div className="w-full max-w-[min(90vw,560px)]">
       <svg
@@ -106,46 +137,41 @@ export function Board({
         aria-hidden="true"
       >
         <defs>
-          <filter id={grain} x="0%" y="0%" width="100%" height="100%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="1.1"
-              numOctaves="3"
-              stitchTiles="stitch"
-              result="noise"
-            />
-            <feColorMatrix
-              type="matrix"
-              values="0 0 0 0 0.28
-                      0 0 0 0 0.26
-                      0 0 0 0 0.22
-                      0 0 0 0.16 0"
-              in="noise"
-            />
-          </filter>
-          <filter id={wobble} x="-3%" y="-3%" width="106%" height="106%">
-            <feTurbulence
-              type="turbulence"
-              baseFrequency="0.045"
-              numOctaves="2"
-              result="noise"
-            />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="noise"
-              scale="1.6"
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
           <pattern
-            id={paper}
-            width="64"
-            height="64"
+            id={hatchId}
+            width="10"
+            height="10"
             patternUnits="userSpaceOnUse"
+            patternTransform="rotate(42)"
           >
-            <rect width="64" height="64" fill="#f1ebdf" />
-            <rect width="64" height="64" filter={`url(#${grain})`} />
+            <rect width="10" height="10" fill="#cfc6b6" />
+            <path
+              d="M0 1.15h10M0 3.05h10M0 4.95h10M0 6.85h10M0 8.75h10"
+              stroke="#3a3834"
+              strokeWidth="0.85"
+              strokeOpacity="0.55"
+              strokeLinecap="round"
+            />
+            <path
+              d="M0 2.05h10M0 3.95h10M0 5.85h10M0 7.75h10"
+              stroke="#2a2824"
+              strokeWidth="0.45"
+              strokeOpacity="0.35"
+              strokeLinecap="round"
+            />
+            <path
+              d="M0 0.35h10M0 9.45h10"
+              stroke="#4a4640"
+              strokeWidth="0.3"
+              strokeOpacity="0.25"
+            />
+            <path
+              d="M0 1.55h10M0 6.15h10"
+              stroke="#3a3834"
+              strokeWidth="0.35"
+              strokeOpacity="0.12"
+              transform="rotate(-80 5 5)"
+            />
           </pattern>
         </defs>
       </svg>
@@ -162,12 +188,11 @@ export function Board({
           aria-hidden="true"
         >
           <path
-            d="M1.6 2.1 C 2.4 1.2, 8 1.4, 20 1.1 C 45 0.6, 55 1.5, 78 1.2 C 90 1.1, 97.2 1.8, 98.4 2.8 C 99.2 4, 98.8 12, 98.9 28 C 99.1 48, 98.6 58, 98.8 78 C 98.9 90, 98.2 97, 97.2 98.2 C 95.8 99.2, 88 98.7, 72 98.9 C 50 99.2, 40 98.5, 22 98.8 C 10 99, 2.4 98.4, 1.5 97.1 C 0.7 95.6, 1.2 88, 1.1 72 C 0.9 50, 1.4 40, 1.2 22 C 1.1 10, 0.9 3.2, 1.6 2.1 Z"
-            fill={`url(#${paper})`}
+            d={DECKLE_PATH}
+            fill="#f1ebdf"
             stroke="#2c2a26"
             strokeWidth="0.7"
             vectorEffect="non-scaling-stroke"
-            filter={`url(#${wobble})`}
           />
         </svg>
 
@@ -194,6 +219,19 @@ export function Board({
                 aria-label={`Square ${sq.square}`}
                 onClick={() => handleTap(sq.square)}
               >
+                {!sq.isLight && (
+                  <svg
+                    className="pointer-events-none absolute inset-0 h-full w-full"
+                    aria-hidden="true"
+                  >
+                    <rect
+                      width="100%"
+                      height="100%"
+                      fill={`url(#${hatchId})`}
+                    />
+                  </svg>
+                )}
+
                 {sq.showRank && (
                   <span
                     className={[
@@ -219,35 +257,61 @@ export function Board({
           })}
         </div>
 
-        {pieces.map((piece) => {
-          const { file, rank } = displayPosition(piece.square, orientation);
-          const isSelected = selectedSquare === piece.square;
-
-          return (
-            <button
-              key={`${piece.color}-${piece.type}-${piece.square}`}
-              type="button"
-              className={[
-                "piece pointer-events-auto absolute left-[2.4%] top-[2.4%] z-10 flex h-[calc(95.2%/8)] w-[calc(95.2%/8)] items-center justify-center border-0 bg-transparent p-0",
-                isSelected ? "z-20 piece-lifted" : "",
-              ].join(" ")}
-              style={{
-                transform: `translate3d(${file * 100}%, ${rank * 100}%, 0)`,
-              }}
-              aria-label={`${piece.color === "w" ? "White" : "Black"} ${piece.type} on ${piece.square}`}
-              onClick={(event) => {
-                event.stopPropagation();
+        {rendered.map((piece) => (
+          <button
+            key={piece.key}
+            type="button"
+            disabled={!piece.interactive}
+            className="piece piece-motion pointer-events-auto absolute left-[2.4%] top-[2.4%] flex h-[calc(95.2%/8)] w-[calc(95.2%/8)] items-center justify-center border-0 bg-transparent p-0"
+            style={{
+              transform: `translate3d(${piece.file * 100}%, ${piece.rank * 100}%, 0)`,
+              zIndex: piece.zIndex,
+              transition: `transform ${TRAVEL_MS}ms cubic-bezier(0.2, 0.9, 0.3, 1)`,
+              pointerEvents: piece.interactive ? "auto" : "none",
+            }}
+            aria-label={`${piece.color === "w" ? "White" : "Black"} ${piece.type} on ${piece.square}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (piece.interactive) {
                 handleTap(piece.square);
+              }
+            }}
+          >
+            {/* Knight arc wrapper — only translateY */}
+            <span
+              className="piece-arc relative flex h-full w-full items-center justify-center"
+              style={{
+                transform: `translate3d(0, ${piece.arcY}%, 0)`,
+                transition: `transform ${TRAVEL_MS}ms cubic-bezier(0.2, 0.85, 0.3, 1)`,
               }}
             >
-              <Piece
-                type={piece.type}
-                color={piece.color}
-                className="h-[98%] w-[98%] drop-shadow-[0_1.5px_1.5px_rgba(55,42,24,0.32)]"
+              {/* Lift shadow — opacity + scale only; none at rest */}
+              <span
+                className="piece-lift-shadow"
+                aria-hidden="true"
+                style={{
+                  opacity: piece.shadow,
+                  transform: `translate(-50%, 18%) scale(${0.65 + piece.shadow * 0.55})`,
+                }}
               />
-            </button>
-          );
-        })}
+              <span
+                className="relative flex h-[98%] w-[98%] items-center justify-center"
+                style={{
+                  opacity: piece.opacity,
+                  transform: `scale(${piece.scale}) rotate(${piece.rotateDeg}deg)`,
+                  transition:
+                    "transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 160ms linear",
+                }}
+              >
+                <Piece
+                  type={piece.type}
+                  color={piece.color}
+                  className="h-full w-full"
+                />
+              </span>
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   );

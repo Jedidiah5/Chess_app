@@ -1,0 +1,39 @@
+/**
+ * Phase 1.5 paper tokens — palette only until knight is approved.
+ */
+:root {
+  /* Page / board surroundings */
+  --paper-page: #e6dcc8;
+  --paper-page-deep: #d8cdb6;
+
+  /* Squares — warm off-white vs muted ink wash (not B/W) */
+  --paper-light: #f2e8d5;
+  --paper-dark: #a89880;
+
+  /* Ink */
+  --ink: #2c2419;
+  --ink-muted: #5c5346;
+  --ink-faint: rgba(44, 36, 25, 0.18);
+
+  /* Piece fills */
+  --piece-white-fill: #f7f0e2;
+  --piece-black-fill: #2c2419;
+  --piece-white-stroke: #2c2419;
+  --piece-black-stroke: #e8dfc8;
+
+  /* Warm shadows only — never neutral grey */
+  --shadow-warm: rgba(92, 58, 28, 0.28);
+  --shadow-warm-soft: rgba(92, 58, 28, 0.14);
+  --shadow-warm-tight: rgba(70, 42, 18, 0.35);
+
+  /* Type — letterpress-ish, two weights */
+  --font-print: var(--font-newsreader), "Iowan Old Style", "Palatino Linotype",
+    Palatino, "Book Antiqua", Georgia, serif;
+}
+
+body {
+  background: var(--paper-page);
+  color: var(--ink);
+  font-family: var(--font-print);
+  font-weight: 400;
+}

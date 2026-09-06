@@ -1,15 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Board, findKingSquare } from "@/components/board/Board";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
+import {
+  buildAnimMoveFromCommit,
+  useMoveAnimator,
+} from "@/components/board/useMoveAnimator";
 import { createEngine, isPromotionMove } from "@/lib/chess/engine";
 import type { BoardOrientation, Promotion, Square } from "@/lib/chess/types";
-import {
-  displayColor,
-  endReasonLabel,
-} from "@/lib/chess/types";
+import { displayColor, endReasonLabel } from "@/lib/chess/types";
 
 type PendingPromotion = {
   from: Square;
@@ -22,12 +23,26 @@ export default function LocalPlayPage() {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
 
+  const {
+    motionPieces,
+    busy,
+    playMove,
+    snapTo,
+    setSelectedLift,
+  } = useMoveAnimator({ orientation });
+
+  useEffect(() => {
+    snapTo(engine.board, null);
+    // initial only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const legalTargets = useMemo(() => {
-    if (!selectedSquare) {
+    if (!selectedSquare || busy) {
       return [];
     }
     return engine.legalMoves(selectedSquare);
-  }, [engine, selectedSquare]);
+  }, [engine, selectedSquare, busy]);
 
   const inCheckSquare = useMemo(() => {
     if (!engine.inCheck) {
@@ -38,22 +53,25 @@ export default function LocalPlayPage() {
 
   const commitMove = useCallback(
     (from: Square, to: Square, promotion?: Promotion) => {
+      const prev = engine.board;
       const next = createEngine(engine.fen);
       const outcome = next.makeMove(from, to, promotion);
       if (!outcome.ok) {
         return false;
       }
+      const anim = buildAnimMoveFromCommit(prev, from, to, next.board, promotion);
       setEngine(next);
       setSelectedSquare(null);
       setPendingPromotion(null);
+      playMove(anim, next.board);
       return true;
     },
-    [engine.fen],
+    [engine.board, engine.fen, playMove],
   );
 
   const handleSquareTap = useCallback(
     (square: Square) => {
-      if (engine.terminal.over) {
+      if (engine.terminal.over || busy) {
         return;
       }
 
@@ -61,6 +79,7 @@ export default function LocalPlayPage() {
 
       if (selectedSquare === square) {
         setSelectedSquare(null);
+        setSelectedLift(engine.board, null);
         return;
       }
 
@@ -78,12 +97,14 @@ export default function LocalPlayPage() {
 
       if (piece && piece.color === engine.turn) {
         setSelectedSquare(square);
+        setSelectedLift(engine.board, square);
         return;
       }
 
       setSelectedSquare(null);
+      setSelectedLift(engine.board, null);
     },
-    [commitMove, engine, selectedSquare],
+    [busy, commitMove, engine, selectedSquare, setSelectedLift],
   );
 
   const handlePromotionSelect = useCallback(
@@ -97,10 +118,12 @@ export default function LocalPlayPage() {
   );
 
   const handleNewGame = useCallback(() => {
-    setEngine(createEngine());
+    const fresh = createEngine();
+    setEngine(fresh);
     setSelectedSquare(null);
     setPendingPromotion(null);
-  }, []);
+    snapTo(fresh.board, null);
+  }, [snapTo]);
 
   const toggleOrientation = useCallback(() => {
     setOrientation((current) => (current === "white" ? "black" : "white"));
@@ -120,7 +143,7 @@ export default function LocalPlayPage() {
   }
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-8">
+    <main className="min-h-screen bg-[#ebe4d6] px-4 py-8">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 lg:flex-row lg:items-start">
         <section className="flex flex-1 flex-col items-center gap-4">
           <header className="text-center">
@@ -141,6 +164,7 @@ export default function LocalPlayPage() {
 
           <Board
             pieces={engine.board}
+            motionPieces={motionPieces}
             orientation={orientation}
             selectedSquare={selectedSquare}
             legalTargets={legalTargets}
