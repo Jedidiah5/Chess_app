@@ -1,0 +1,59 @@
+# Project rules — Chess app
+
+`ARCHITECTURE.md` in the project root is the source of truth. Read it before
+proposing structural changes. If something you're about to write contradicts it,
+say so and stop rather than quietly diverging.
+
+## Stack — do not substitute
+
+- Next.js (App Router) · TypeScript strict · Tailwind
+- `chess.js` for all rules logic
+- Supabase (Postgres + Auth + Realtime + Edge Functions) — later phases only
+- Custom CSS grid board with SVG pieces. NOT `react-chessboard`
+- Three.js is for the marketing landing page only, and only in a later phase
+
+Do not add a dependency without asking first. Do not reach for a state library,
+an animation library, or a UI kit unless I ask for one.
+
+## Non-negotiables
+
+1. **`chess.js` is the single source of truth for game state.** UI components
+   render from it. A DOM element's position, a CSS class, or a piece of local
+   component state is never consulted to decide whether a move is legal or whose
+   turn it is.
+2. **Only animate `transform` and `opacity`.** Both are GPU-composited.
+   Animating `top`, `left`, `width`, or `height` triggers layout on every frame
+   and stutters on mobile. No exceptions.
+3. **Later phases: the server owns the board and the clock.** Clients never
+   write to `games`, `moves`, or `profiles`. Move legality and elapsed time are
+   decided server-side in Edge Functions. Never trust a client-reported result.
+4. **`SUPABASE_SERVICE_ROLE_KEY` never appears in a `NEXT_PUBLIC_*` variable**
+   or in any file under `app/` or `components/`.
+5. **Shared logic is shared, not copied.** `lib/chess/` and `lib/elo.ts` are
+   imported by both the client and the Edge Functions. Never duplicate the Elo
+   formula or the rules helpers.
+
+## Scope discipline
+
+- Build only the phase I name. Do not scaffold future phases "while we're here"
+- Do not create Supabase clients, Edge Functions, auth flows, or Three.js
+  scenes until the phase I'm on calls for them
+- Do not add placeholder files, TODO stubs, or empty directories for later work
+
+## Code style
+
+- Functional components, named exports. No default exports except pages
+- No `any`. If a type is genuinely unknown, use `unknown` and narrow it
+- Small components. If a file passes ~150 lines, it's doing two jobs
+- Derive state; don't mirror it. If a value can be computed from the FEN,
+  compute it — don't store a second copy that can drift
+- Comment the non-obvious only: why, not what
+- No barrel files (`index.ts` re-exports)
+
+## Working style
+
+- Before writing code for a new feature, state your plan in 3–5 lines and wait
+- Change only the files the task needs. Do not reformat or "tidy" unrelated code
+- If a requirement is ambiguous, ask one specific question rather than guessing
+- If you think something in `ARCHITECTURE.md` is wrong, say so directly. I want
+  the disagreement, not silent compliance
