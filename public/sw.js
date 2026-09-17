@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = "chess-vdev-kill2";
+const CACHE_VERSION = "chess-vW_wdTAg9xcLb";
 const OFFLINE_FALLBACK = "/offline";
 
 const IS_LOCAL =
@@ -79,7 +79,6 @@ if (IS_LOCAL) {
   }
 
   const PRECACHE = [
-    "/",
     "/play",
     "/play/local",
     "/play/computer",
@@ -236,4 +235,3 @@ if (IS_LOCAL) {
     );
   });
 }
-

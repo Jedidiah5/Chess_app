@@ -1,180 +1,155 @@
 "use client";
 
 /**
- * Marketing-only Three.js scene. Must never be imported from (app)/ or play routes.
- * One lathed pawn geometry, two InstancedMeshes (cream / ink); matte; ContactShadows; idle drift.
+ * Marketing-only scene. Must never be imported from (app)/ or play routes.
+ *
+ * Two slim paper-craft pawns orbiting a shared centre on one slow, constant,
+ * linear revolution — no easing, no bounce. Facets come from low-segment lathe
+ * geometry plus flat shading; the ink contour is a back-face hull. Lighting is
+ * deliberately flat so the pair reads as printed tone, not shiny plastic.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
-import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-const CREAM = "#f7f0e2";
-const INK = "#2c2419";
-const PAPER = "#e6dcc8";
+const CREAM = "#fbf6ec";
+const INK = "#241d15";
+const PAPER = "#e8dfcc";
+
+/** One full revolution, very slow and constant. */
+const ORBIT_SECONDS = 74;
+const SELF_SPIN_SECONDS = 46;
+const ORBIT_RADIUS = 0.7;
+/** Ring tilt. Steep enough that the far pawn clears the near one at the crossings. */
+const ORBIT_TILT = 0.46;
 
 /**
- * Staunton pawn silhouette as lathe points (x = radius, y = height).
- * Slight radius wobble so it reads engraved, not CAD-smooth.
+ * Slim Staunton pawn as lathe points (x = radius, y = height).
+ * Straight plinth wall, a stem with real weight, and a head narrower than
+ * the base — tall and drawn, never squat.
  */
-function buildPawnGeometry(): THREE.BufferGeometry {
-  // Profile tuned to the 2D engraved pawn: ball head, collar, tapered body, stepped base.
-  const pts: THREE.Vector2[] = [
-    new THREE.Vector2(0.0, 0.0),
-    new THREE.Vector2(0.46, 0.0),
-    new THREE.Vector2(0.48, 0.035),
-    new THREE.Vector2(0.4, 0.09),
-    new THREE.Vector2(0.38, 0.13),
-    // base collar
-    new THREE.Vector2(0.42, 0.155),
-    new THREE.Vector2(0.4, 0.19),
-    new THREE.Vector2(0.29, 0.21),
-    // body
-    new THREE.Vector2(0.27, 0.34),
-    new THREE.Vector2(0.25, 0.48),
-    new THREE.Vector2(0.21, 0.58),
-    new THREE.Vector2(0.165, 0.66),
-    // neck ring
-    new THREE.Vector2(0.19, 0.695),
-    new THREE.Vector2(0.145, 0.73),
-    // ball head
-    new THREE.Vector2(0.175, 0.78),
-    new THREE.Vector2(0.215, 0.84),
-    new THREE.Vector2(0.22, 0.9),
-    new THREE.Vector2(0.185, 0.96),
-    new THREE.Vector2(0.11, 0.995),
-    new THREE.Vector2(0.0, 1.01),
-  ];
-  const geo = new THREE.LatheGeometry(pts, 64);
-  // Weld the lathe seam so normals stay smooth (no paper "fold" line).
-  const welded = mergeVertices(geo);
-  geo.dispose();
-  welded.computeVertexNormals();
-  return welded as THREE.LatheGeometry;
-}
-
-type PawnDef = {
-  position: [number, number, number];
-  rotationY: number;
-  scale: number;
-  ink: boolean;
-};
-
-const PAWNS: PawnDef[] = [
-  { position: [-0.85, 0, 0.15], rotationY: 0.15, scale: 1.05, ink: false },
-  { position: [0.05, 0, -0.1], rotationY: -0.35, scale: 1.0, ink: true },
-  { position: [0.95, 0, 0.25], rotationY: 0.55, scale: 0.92, ink: false },
-  { position: [0.35, 0, 0.85], rotationY: -0.1, scale: 0.88, ink: true },
+const PROFILE: [number, number][] = [
+  [0.0, 0.0],
+  [0.34, 0.0],
+  [0.345, 0.046], // plinth wall
+  [0.3, 0.076], // chamfer
+  [0.256, 0.096],
+  [0.226, 0.116],
+  [0.246, 0.136], // collar ring
+  [0.226, 0.156],
+  [0.176, 0.186], // stem springs from the collar
+  [0.156, 0.28],
+  [0.138, 0.4],
+  [0.126, 0.52],
+  [0.118, 0.602], // neck, narrowest point
+  [0.15, 0.646], // ring beneath the head
+  [0.116, 0.676],
+  [0.146, 0.716], // head
+  [0.185, 0.786],
+  [0.19, 0.85], // head at its widest
+  [0.16, 0.915],
+  [0.096, 0.962],
+  [0.0, 0.98],
 ];
 
-function useInstancedPawns(
-  geometry: THREE.BufferGeometry,
-  defs: PawnDef[],
-  ink: boolean,
-) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const filtered = useMemo(() => defs.filter((d) => d.ink === ink), [defs, ink]);
+/**
+ * One shared geometry for the whole page. Module scope on purpose: a
+ * per-component instance plus an unmount dispose gets torn down by StrictMode's
+ * double effect invoke in dev, leaving the second mount with dead buffers.
+ */
+let pawnGeometry: THREE.LatheGeometry | null = null;
 
-  useEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    const dummy = new THREE.Object3D();
-    filtered.forEach((pawn, i) => {
-      dummy.position.set(...pawn.position);
-      dummy.rotation.set(0, pawn.rotationY, 0);
-      dummy.scale.setScalar(pawn.scale);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [filtered]);
-
-  return { meshRef, count: filtered.length, geometry };
+function getPawnGeometry() {
+  if (!pawnGeometry) {
+    const pts = PROFILE.map(([x, y]) => new THREE.Vector2(x, y));
+    // Low segment count is deliberate: visible facets read as folded paper.
+    pawnGeometry = new THREE.LatheGeometry(pts, 20);
+  }
+  return pawnGeometry;
 }
 
-function Pawns({ frozen }: { frozen: boolean }) {
-  const geo = useMemo(() => buildPawnGeometry(), []);
-  const group = useRef<THREE.Group>(null);
-  const cream = useInstancedPawns(geo, PAWNS, false);
-  const ink = useInstancedPawns(geo, PAWNS, true);
-
-  useFrame((_, delta) => {
-    if (frozen || !group.current) return;
-    group.current.rotation.y += delta * 0.12;
-  });
-
-  useEffect(() => {
-    return () => {
-      geo.dispose();
-    };
-  }, [geo]);
+function Pawn({ tone }: { tone: "cream" | "ink" }) {
+  const geometry = getPawnGeometry();
+  const isCream = tone === "cream";
 
   return (
-    <group ref={group}>
-      <instancedMesh
-        ref={cream.meshRef}
-        args={[geo, undefined, cream.count]}
-        castShadow={false}
-        receiveShadow={false}
+    <group>
+      {/* Ink contour — back-face hull, inflated a hair */}
+      <mesh geometry={geometry} scale={[1.07, 1.03, 1.07]}>
+        <meshBasicMaterial color={INK} side={THREE.BackSide} />
+      </mesh>
+      <mesh geometry={geometry}>
+        <meshStandardMaterial
+          color={isCream ? CREAM : INK}
+          roughness={1}
+          metalness={0}
+          flatShading
+        />
+      </mesh>
+
+      {/* Cast shadow as a flat printed ellipse — no shadow map, no grey smear */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0.03, 0.004, 0.12]}
+        scale={[1, 0.82, 1]}
       >
-        <meshStandardMaterial color={CREAM} roughness={0.92} metalness={0} />
-      </instancedMesh>
-      <instancedMesh
-        ref={ink.meshRef}
-        args={[geo, undefined, ink.count]}
-        castShadow={false}
-        receiveShadow={false}
-      >
-        <meshStandardMaterial color={INK} roughness={0.88} metalness={0} />
-      </instancedMesh>
+        <circleGeometry args={[0.38, 24]} />
+        <meshBasicMaterial
+          color="#6b4a22"
+          transparent
+          opacity={0.13}
+          depthWrite={false}
+        />
+      </mesh>
     </group>
   );
 }
 
-function CameraDrift({ frozen }: { frozen: boolean }) {
-  useFrame((state) => {
+function OrbitingPawns({ frozen }: { frozen: boolean }) {
+  const orbit = useRef<THREE.Group>(null);
+  const cream = useRef<THREE.Group>(null);
+  const ink = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
     if (frozen) return;
-    const t = state.clock.elapsedTime;
-    state.camera.position.x = Math.sin(t * 0.18) * 0.18;
-    state.camera.position.y = 1.4 + Math.sin(t * 0.11) * 0.05;
-    state.camera.position.z = 3.15 + Math.cos(t * 0.14) * 0.08;
-    state.camera.lookAt(0, 0.4, 0.1);
+    const orbitStep = (delta * Math.PI * 2) / ORBIT_SECONDS;
+    const selfStep = (delta * Math.PI * 2) / SELF_SPIN_SECONDS;
+    if (orbit.current) orbit.current.rotation.y += orbitStep;
+    // Counter-spin the pair so it never reads as one rigid prop.
+    if (cream.current) cream.current.rotation.y += selfStep;
+    if (ink.current) ink.current.rotation.y -= selfStep;
   });
-  return null;
+
+  return (
+    // Shifted down so the pair is centred on the origin the camera aims at.
+    // The ring is tilted enough that the far pawn rides higher in frame — that
+    // is what keeps the two from collapsing into one silhouette mid-sweep.
+    <group rotation={[ORBIT_TILT, 0, 0.035]} position={[0, -0.36, 0]}>
+      {/* Open just off the flat row, so first paint already has depth. */}
+      <group ref={orbit} rotation={[0, Math.PI * 0.1, 0]}>
+        <group ref={cream} position={[-ORBIT_RADIUS, 0, 0]}>
+          <Pawn tone="cream" />
+        </group>
+        <group ref={ink} position={[ORBIT_RADIUS, 0, 0]} scale={0.97}>
+          <Pawn tone="ink" />
+        </group>
+      </group>
+    </group>
+  );
 }
 
 function SceneContent({ frozen }: { frozen: boolean }) {
   return (
     <>
       <color attach="background" args={[PAPER]} />
-      <fog attach="fog" args={[PAPER, 6, 14]} />
 
-      <ambientLight intensity={0.55} color="#fff4e6" />
-      <directionalLight
-        position={[3.5, 5.5, 2.5]}
-        intensity={1.15}
-        color="#ffe2c0"
-      />
-      <directionalLight
-        position={[-2.5, 2.0, -1.5]}
-        intensity={0.35}
-        color="#d4c4a8"
-      />
+      {/* Flat, warm key: enough to model the facets, not enough to gloss them */}
+      <ambientLight intensity={1.02} color="#fff7ea" />
+      <directionalLight position={[2.4, 3.6, 3.4]} intensity={0.5} color="#ffeed6" />
+      <directionalLight position={[-3.2, 1.2, -1.4]} intensity={0.14} color="#c9b596" />
 
-      <CameraDrift frozen={frozen} />
-      <Pawns frozen={frozen} />
-
-      {/* Ground is the clearColor; ContactShadows alone for grounding. */}
-      <ContactShadows
-        position={[0, 0.001, 0]}
-        opacity={0.28}
-        scale={10}
-        blur={3.2}
-        far={4}
-        color="#5c3a1c"
-      />
+      <OrbitingPawns frozen={frozen} />
     </>
   );
 }
@@ -201,13 +176,8 @@ export function PaperPawnsScene({ className, freeze }: PaperPawnsSceneProps) {
     <div className={className} style={{ background: PAPER }}>
       <Canvas
         dpr={[1, 1.75]}
-        gl={{
-          antialias: true,
-          alpha: false,
-          powerPreference: "high-performance",
-          preserveDrawingBuffer: true,
-        }}
-        camera={{ position: [0, 1.4, 3.2], fov: 38, near: 0.1, far: 40 }}
+        gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+        camera={{ position: [0, 0.16, 4.95], fov: 30, near: 0.1, far: 30 }}
         style={{ width: "100%", height: "100%", display: "block" }}
       >
         <SceneContent frozen={frozen} />

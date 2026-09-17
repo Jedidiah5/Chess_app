@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { OfflineGate } from "@/components/offline/OfflineUI";
+import { OptionPlate } from "@/components/ui/OptionPlate";
+import { PaperButton } from "@/components/ui/PaperButton";
+import { PaperCard } from "@/components/ui/PaperCard";
 import { TIME_CONTROLS } from "@/lib/chess/timeControl";
 import { createGame } from "@/lib/supabase/functions";
 import type { TimeControl } from "@/types/game";
@@ -34,53 +37,65 @@ export default function PlayOnlinePage() {
 
   return (
     <OfflineGate feature="Online play">
-      <main className="min-h-screen bg-stone-100 px-4 py-12">
-        <div className="mx-auto max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-semibold text-stone-900">Play online</h1>
-          <p className="mt-2 text-sm text-stone-600">
-            Choose a time control, create a game, and share the invite link.
-          </p>
+      <main className="paper-grain min-h-dvh px-5 py-10 sm:py-14">
+        <div className="mx-auto w-full max-w-md">
+          <header>
+            <div className="flex items-center gap-4">
+              <span className="print-rule" aria-hidden />
+              <span className="meta-caps whitespace-nowrap">Set the game</span>
+              <span className="print-rule" aria-hidden />
+            </div>
+            <h1
+              className="mt-6 text-center text-4xl font-semibold tracking-[-0.03em]"
+              style={{ color: "var(--ink)" }}
+            >
+              Play online
+            </h1>
+            <p className="meta-caps mt-3 text-center">Rated · Live clocks</p>
+          </header>
 
-          <fieldset className="mt-6 space-y-2">
-            <legend className="text-sm font-medium text-stone-700">Time control</legend>
-            {(Object.keys(TIME_CONTROLS) as TimeControl[]).map((key) => (
-              <label
-                key={key}
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
-              >
-                <input
-                  type="radio"
-                  name="timeControl"
-                  value={key}
-                  checked={timeControl === key}
-                  onChange={() => setTimeControl(key)}
-                />
-                {TIME_CONTROLS[key].label}
-              </label>
-            ))}
-          </fieldset>
-
-          {errorMessage && (
-            <p className="mt-4 text-sm text-red-600" role="alert">
-              {errorMessage}
+          <PaperCard className="mt-8">
+            <p className="text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+              Choose a time control, create the game, then share the invite
+              link with your opponent.
             </p>
-          )}
 
-          <button
-            type="button"
-            onClick={handleCreateGame}
-            disabled={loading}
-            className="mt-6 w-full rounded-md bg-stone-800 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
-          >
-            {loading ? "Creating…" : "Create game"}
-          </button>
+            <fieldset className="mt-6">
+              <legend className="meta-caps">Time control</legend>
+              <div className="mt-3 space-y-2.5">
+                {(Object.keys(TIME_CONTROLS) as TimeControl[]).map((key) => (
+                  <OptionPlate
+                    key={key}
+                    name="timeControl"
+                    checked={timeControl === key}
+                    onSelect={() => setTimeControl(key)}
+                    label={TIME_CONTROLS[key].label}
+                  />
+                ))}
+              </div>
+            </fieldset>
 
-          <Link
-            href="/play"
-            className="mt-4 block text-center text-sm text-stone-600 underline-offset-2 hover:underline"
-          >
-            Back to play menu
-          </Link>
+            {errorMessage && (
+              <p className="paper-alert mt-5" role="alert">
+                {errorMessage}
+              </p>
+            )}
+
+            <PaperButton
+              variant="primary"
+              onClick={handleCreateGame}
+              disabled={loading}
+              className="mt-7 w-full"
+            >
+              {loading ? "Creating…" : "Create game"}
+            </PaperButton>
+          </PaperCard>
+
+          <footer className="mt-8 text-center">
+            <Link href="/play" className="paper-link text-sm font-semibold">
+              Back to play menu
+            </Link>
+          </footer>
         </div>
       </main>
     </OfflineGate>

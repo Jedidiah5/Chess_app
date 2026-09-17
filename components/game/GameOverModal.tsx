@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { PaperButton } from "@/components/ui/PaperButton";
+import { PencilFrame } from "@/components/ui/PencilFrame";
 import type { DbEndReason, DbGameResult } from "@/types/game";
 import type { EndReason, GameResult } from "@/lib/chess/types";
 
@@ -35,39 +37,43 @@ export function GameOverModal({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-[#2c2a26]/35"
+        className="absolute inset-0 bg-[rgba(36,29,21,0.45)]"
         aria-label="Dismiss"
         onClick={onDismiss}
       />
 
       <div className="game-over-card relative w-full max-w-sm px-8 py-10 text-center">
-        <p className="game-over-eyebrow text-[11px] font-medium uppercase tracking-[0.22em] text-[#5a554c]">
-          Game over
-        </p>
-        <h2
-          id="game-over-title"
-          className="game-over-headline mt-3 text-3xl font-semibold text-[#2c2a26]"
-        >
-          {headline}
-        </h2>
-        <p
-          id="game-over-reason"
-          className="mt-3 text-base leading-relaxed text-[#5a554c]"
-        >
-          {reason}
-        </p>
+        <PencilFrame
+          className="pointer-events-none absolute inset-0 h-full w-full text-[var(--ink)]"
+          strokeWidth={1.8}
+          inset={6}
+        />
 
-        <div className="mt-8 flex flex-col items-center gap-3">
-          {actions}
-          {onDismiss && (
-            <button
-              type="button"
-              onClick={onDismiss}
-              className="game-over-btn rounded-sm border border-[#2c2a26]/35 bg-[#f4efe4] px-5 py-2.5 text-sm text-[#2c2a26] hover:bg-[#ebe4d6]"
-            >
-              {dismissLabel}
-            </button>
-          )}
+        <div className="relative z-[1]">
+          <p className="meta-caps">Game over</p>
+          <h2
+            id="game-over-title"
+            className="game-over-headline mt-3 text-3xl font-semibold"
+            style={{ color: "var(--ink)" }}
+          >
+            {headline}
+          </h2>
+          <p
+            id="game-over-reason"
+            className="mt-3 text-base leading-relaxed"
+            style={{ color: "var(--ink-muted)" }}
+          >
+            {reason}
+          </p>
+
+          <div className="mt-8 flex flex-col items-center gap-3">
+            {actions}
+            {onDismiss && (
+              <PaperButton variant="ghost" onClick={onDismiss}>
+                {dismissLabel}
+              </PaperButton>
+            )}
+          </div>
         </div>
       </div>
     </div>

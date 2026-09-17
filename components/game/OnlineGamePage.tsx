@@ -30,6 +30,8 @@ import {
   touchPresence,
 } from "@/lib/supabase/games";
 import { RematchButton } from "@/components/game/RematchButton";
+import { PaperButton } from "@/components/ui/PaperButton";
+import { PaperCard } from "@/components/ui/PaperCard";
 import {
   GameOverModal,
   onlineEndReasonLabel,
@@ -544,32 +546,37 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
   if (loadError) {
     return (
-      <main className="min-h-screen bg-stone-100 px-4 py-12">
-        <div className="mx-auto max-w-md rounded-lg border border-red-200 bg-white p-6 text-sm">
-          <h1 className="text-lg font-semibold text-stone-900">Could not load game</h1>
-          <p className="mt-2 text-red-700" role="alert">
+      <main className="paper-grain min-h-dvh px-5 py-12">
+        <PaperCard className="mx-auto max-w-md">
+          <h1
+            className="text-xl font-semibold tracking-tight"
+            style={{ color: "var(--ink)" }}
+          >
+            Could not load game
+          </h1>
+          <p className="paper-alert mt-3" role="alert">
             {loadError}
           </p>
-          <p className="mt-4 text-stone-600">
+          <p className="mt-4 text-sm" style={{ color: "var(--ink-muted)" }}>
             If you just added Phase 4, run{" "}
-            <code className="rounded bg-stone-100 px-1">supabase db push</code>{" "}
-            and redeploy the Edge Functions.
+            <code className="font-mono text-xs">supabase db push</code> and
+            redeploy the Edge Functions.
           </p>
           <Link
             href="/play"
-            className="mt-4 inline-block text-stone-700 underline-offset-2 hover:underline"
+            className="paper-link mt-5 inline-block text-sm font-semibold"
           >
             Back to play menu
           </Link>
-        </div>
+        </PaperCard>
       </main>
     );
   }
 
   if (loading || !game || !userId) {
     return (
-      <main className="min-h-screen bg-stone-100 px-4 py-12">
-        <p className="text-center text-stone-600">Loading game…</p>
+      <main className="paper-grain flex min-h-dvh items-center justify-center px-4">
+        <p className="meta-caps">Loading game</p>
       </main>
     );
   }
@@ -596,33 +603,48 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     game.draw_offer_by !== null && game.draw_offer_by !== userId;
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-8">
+    <main className="paper-grain min-h-dvh px-5 py-8">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 lg:flex-row lg:items-start">
-        <section className="flex flex-1 flex-col items-center gap-4">
-          <header className="text-center">
-            <h1 className="text-2xl font-semibold text-stone-900">Online game</h1>
-            <p className="mt-1 text-stone-600">{headerText}</p>
+        <section className="flex flex-1 flex-col items-center gap-5">
+          <header className="w-full max-w-[min(90vw,560px)]">
+            <div className="flex items-baseline justify-between gap-4">
+              <h1
+                className="text-2xl font-semibold tracking-[-0.02em]"
+                style={{ color: "var(--ink)" }}
+              >
+                Online game
+              </h1>
+              <span className="meta-caps">Rated</span>
+            </div>
+
+            <div className="status-strip mt-3">
+              <span className="meta-caps">{headerText}</span>
+            </div>
+
             {statusMessage && (
-              <p className="mt-2 text-sm text-amber-700" role="alert">
+              <p className="paper-alert mt-3" role="alert">
                 {statusMessage}
               </p>
             )}
           </header>
 
           {game.status === "waiting" && inviteCode && (
-            <div className="w-full max-w-md rounded-lg border border-stone-200 bg-white p-4 text-sm">
-              <p className="font-medium text-stone-800">Share this invite link</p>
-              <p className="mt-2 break-all font-mono text-stone-600">
+            <PaperCard className="w-full max-w-md">
+              <p className="meta-caps">Share this invite link</p>
+              <p
+                className="mt-2 break-all font-mono text-sm"
+                style={{ color: "var(--ink)" }}
+              >
                 {origin ? `${origin}/join/${inviteCode}` : `/join/${inviteCode}`}
               </p>
-              <button
-                type="button"
+              <PaperButton
+                variant="primary"
                 onClick={handleCopyInvite}
-                className="mt-3 rounded-md bg-stone-800 px-4 py-2 text-sm text-white hover:bg-stone-700"
+                className="mt-4"
               >
-                {copied ? "Copied!" : "Copy link"}
-              </button>
-            </div>
+                {copied ? "Copied" : "Copy link"}
+              </PaperButton>
+            </PaperCard>
           )}
 
           {disconnectSeconds !== null && game.status === "active" && (
@@ -702,12 +724,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
                       reason={copy.reason}
                       onDismiss={() => setDismissedOver(true)}
                       dismissLabel="Close"
-                      actions={
-                        <RematchButton
-                          gameId={game.id}
-                          className="game-over-btn-primary"
-                        />
-                      }
+                      actions={<RematchButton gameId={game.id} />}
                     />
                   );
                 })()}
@@ -719,19 +736,18 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
             </>
           )}
 
-          <Link
-            href="/play"
-            className="text-sm text-stone-600 underline-offset-2 hover:underline"
-          >
+          <Link href="/play" className="paper-link text-sm font-semibold">
             Back to play menu
           </Link>
         </section>
 
-        <aside className="w-full rounded-lg border border-stone-200 bg-white p-4 lg:w-64">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">
-            Moves
-          </h2>
-          <MoveList history={sanHistory} />
+        <aside className="w-full lg:w-64">
+          <PaperCard>
+            <h2 className="meta-caps">Score sheet</h2>
+            <div className="mt-3">
+              <MoveList history={sanHistory} />
+            </div>
+          </PaperCard>
         </aside>
       </div>
 

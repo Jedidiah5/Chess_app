@@ -20,6 +20,9 @@ import {
   type StockfishLevel,
 } from "@/lib/chess/stockfish";
 import { parseUci } from "@/lib/chess/uci";
+import { OptionPlate } from "@/components/ui/OptionPlate";
+import { PaperButton } from "@/components/ui/PaperButton";
+import { PaperCard } from "@/components/ui/PaperCard";
 import type { BoardOrientation, Color, Promotion, Square } from "@/lib/chess/types";
 import { displayColor } from "@/lib/chess/types";
 import {
@@ -390,31 +393,42 @@ export default function ComputerPlayPage() {
 
   if (restoring) {
     return (
-      <main className="min-h-screen bg-[#ebe4d6] px-4 py-12 text-center text-stone-600">
-        Loading…
+      <main className="paper-grain flex min-h-dvh items-center justify-center px-4">
+        <p className="meta-caps">Loading</p>
       </main>
     );
   }
 
   if (!setup) {
     return (
-      <main className="min-h-screen bg-[#ebe4d6] px-4 py-12">
-        <div className="mx-auto max-w-md space-y-6">
-          <header className="text-center">
-            <h1 className="text-2xl font-semibold text-stone-900">Vs computer</h1>
-            <p className="mt-2 text-sm text-stone-600">
+      <main className="paper-grain min-h-dvh px-5 py-10 sm:py-14">
+        <div className="mx-auto w-full max-w-md">
+          <header>
+            <div className="flex items-center gap-4">
+              <span className="print-rule" aria-hidden />
+              <span className="meta-caps whitespace-nowrap">Set the game</span>
+              <span className="print-rule" aria-hidden />
+            </div>
+            <h1
+              className="mt-6 text-center text-4xl font-semibold tracking-[-0.03em]"
+              style={{ color: "var(--ink)" }}
+            >
+              Vs computer
+            </h1>
+            <p className="meta-caps mt-3 text-center">
               On-device Stockfish · always unrated
             </p>
           </header>
 
-          <SetupForm onStart={startGame} />
+          <div className="mt-8">
+            <SetupForm onStart={startGame} />
+          </div>
 
-          <Link
-            href="/play"
-            className="block text-center text-sm text-stone-700 underline-offset-2 hover:underline"
-          >
-            Back to play menu
-          </Link>
+          <footer className="mt-8 text-center">
+            <Link href="/play" className="paper-link text-sm font-semibold">
+              Back to play menu
+            </Link>
+          </footer>
         </div>
       </main>
     );
@@ -423,26 +437,34 @@ export default function ComputerPlayPage() {
   const turnLabel = displayColor(engine.turn);
 
   return (
-    <main className="min-h-screen bg-[#ebe4d6] px-4 py-8">
+    <main className="paper-grain min-h-dvh px-5 py-8">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 lg:flex-row lg:items-start">
-        <section className="flex flex-1 flex-col items-center gap-4">
-          <header className="text-center">
-            <h1 className="text-2xl font-semibold text-stone-900">Vs computer</h1>
-            {!terminal.over ? (
-              <p className="mt-1 text-stone-600">
-                {thinking
-                  ? "Computer thinking…"
-                  : `${turnLabel === "white" ? "White" : "Black"} to move${
-                      engine.inCheck ? " — Check!" : ""
-                    }`}
-              </p>
-            ) : (
-              <p className="mt-1 text-stone-600">Game over · unrated</p>
-            )}
-            <p className="mt-1 text-xs text-stone-500">
-              {STOCKFISH_LEVELS.find((l) => l.id === setup.level)?.label} · you play{" "}
-              {setup.playerColor === "w" ? "White" : "Black"}
-            </p>
+        <section className="flex flex-1 flex-col items-center gap-5">
+          <header className="w-full max-w-[min(90vw,560px)]">
+            <div className="flex items-baseline justify-between gap-4">
+              <h1
+                className="text-2xl font-semibold tracking-[-0.02em]"
+                style={{ color: "var(--ink)" }}
+              >
+                Vs computer
+              </h1>
+              <span className="meta-caps">
+                {STOCKFISH_LEVELS.find((l) => l.id === setup.level)?.label} ·{" "}
+                {setup.playerColor === "w" ? "White" : "Black"}
+              </span>
+            </div>
+
+            <div className="status-strip mt-3">
+              <span className="meta-caps">
+                {terminal.over
+                  ? "Game over · unrated"
+                  : thinking
+                    ? "Computer thinking"
+                    : `${turnLabel === "white" ? "White" : "Black"} to move${
+                        engine.inCheck ? " · Check" : ""
+                      }`}
+              </span>
+            </div>
           </header>
 
           <Board
@@ -455,28 +477,23 @@ export default function ComputerPlayPage() {
             onSquareTap={handleSquareTap}
           />
 
-          <div className="flex gap-3">
-            <button
-              type="button"
-              className="rounded-md bg-stone-800 px-4 py-2 text-sm text-white hover:bg-stone-700"
-              onClick={handleNewGame}
-            >
+          <div className="flex flex-wrap justify-center gap-3">
+            <PaperButton variant="primary" onClick={handleNewGame}>
               New game
-            </button>
-            <Link
-              href="/play"
-              className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 hover:bg-stone-50"
-            >
+            </PaperButton>
+            <PaperButton href="/play" variant="ghost">
               Menu
-            </Link>
+            </PaperButton>
           </div>
         </section>
 
-        <aside className="w-full rounded-lg border border-stone-200 bg-white p-4 lg:w-64">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">
-            Moves
-          </h2>
-          <MoveList history={moves.map((m) => m.san)} />
+        <aside className="w-full lg:w-64">
+          <PaperCard>
+            <h2 className="meta-caps">Score sheet</h2>
+            <div className="mt-3">
+              <MoveList history={moves.map((m) => m.san)} />
+            </div>
+          </PaperCard>
         </aside>
       </div>
 
@@ -496,13 +513,9 @@ export default function ComputerPlayPage() {
           onDismiss={() => setDismissedOver(true)}
           dismissLabel="Close"
           actions={
-            <button
-              type="button"
-              className="game-over-btn-primary"
-              onClick={handleNewGame}
-            >
+            <PaperButton variant="primary" onClick={handleNewGame}>
               New game
-            </button>
+            </PaperButton>
           }
         />
       )}
@@ -520,7 +533,6 @@ function SetupForm({
 
   return (
     <form
-      className="space-y-5 rounded-lg border border-stone-200 bg-white p-6"
       onSubmit={(e) => {
         e.preventDefault();
         const playerColor: Color =
@@ -528,55 +540,49 @@ function SetupForm({
         onStart(level, playerColor);
       }}
     >
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-stone-700">Difficulty</legend>
-        {STOCKFISH_LEVELS.map((l) => (
-          <label
-            key={l.id}
-            className="flex cursor-pointer items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
-          >
-            <input
-              type="radio"
-              name="level"
-              checked={level === l.id}
-              onChange={() => setLevel(l.id)}
-            />
-            <span className="font-medium">{l.label}</span>
-            <span className="text-stone-500">{l.blurb}</span>
-          </label>
-        ))}
-      </fieldset>
+      <PaperCard>
+        <fieldset>
+          <legend className="meta-caps">Difficulty</legend>
+          <div className="mt-3 space-y-2.5">
+            {STOCKFISH_LEVELS.map((l) => (
+              <OptionPlate
+                key={l.id}
+                name="level"
+                checked={level === l.id}
+                onSelect={() => setLevel(l.id)}
+                label={l.label}
+                note={l.blurb}
+              />
+            ))}
+          </div>
+        </fieldset>
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-stone-700">Your colour</legend>
-        {(
-          [
-            ["w", "White"],
-            ["b", "Black"],
-            ["random", "Random"],
-          ] as const
-        ).map(([value, label]) => (
-          <label
-            key={value}
-            className="flex cursor-pointer items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
-          >
-            <input
-              type="radio"
-              name="color"
-              checked={color === value}
-              onChange={() => setColor(value)}
-            />
-            {label}
-          </label>
-        ))}
-      </fieldset>
+        <fieldset className="mt-7">
+          <legend className="meta-caps">Your colour</legend>
+          <div className="mt-3 space-y-2.5">
+            {(
+              [
+                ["w", "White", "You move first"],
+                ["b", "Black", "Engine opens"],
+                ["random", "Random", "Drawn on start"],
+              ] as const
+            ).map(([value, label, note]) => (
+              <OptionPlate
+                key={value}
+                name="color"
+                checked={color === value}
+                onSelect={() => setColor(value)}
+                label={label}
+                note={note}
+              />
+            ))}
+          </div>
+        </fieldset>
 
-      <button
-        type="submit"
-        className="w-full rounded-md bg-stone-800 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
-      >
-        Start game
-      </button>
+        <PaperButton type="submit" variant="primary" className="mt-7 w-full">
+          Start game
+        </PaperButton>
+      </PaperCard>
     </form>
   );
 }

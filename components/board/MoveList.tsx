@@ -20,31 +20,42 @@ function pairMoves(history: string[]): MovePair[] {
   return pairs;
 }
 
+/** Printed score sheet: hairline rules, tabular figures, no boxes. */
 export function MoveList({ history }: MoveListProps) {
   const pairs = pairMoves(history);
 
   if (pairs.length === 0) {
-    return (
-      <p className="text-sm text-stone-500">No moves yet.</p>
-    );
+    return <p className="meta-caps">No moves yet</p>;
   }
 
   return (
     <div className="max-h-96 overflow-y-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm tabular-nums">
         <thead>
-          <tr className="border-b border-stone-200 text-left text-stone-500">
-            <th className="pb-2 pr-3 font-medium">#</th>
-            <th className="pb-2 pr-3 font-medium">White</th>
-            <th className="pb-2 font-medium">Black</th>
+          <tr>
+            <th className="meta-caps w-8 pb-2 text-left font-normal">#</th>
+            <th className="meta-caps pb-2 text-left font-normal">White</th>
+            <th className="meta-caps pb-2 text-left font-normal">Black</th>
           </tr>
         </thead>
         <tbody>
           {pairs.map((pair) => (
-            <tr key={pair.number} className="border-b border-stone-100">
-              <td className="py-1.5 pr-3 text-stone-400">{pair.number}.</td>
-              <td className="py-1.5 pr-3 font-mono">{pair.white ?? ""}</td>
-              <td className="py-1.5 font-mono">{pair.black ?? ""}</td>
+            <tr
+              key={pair.number}
+              className="border-t border-[var(--ink-faint)]"
+            >
+              <td
+                className="py-1.5 pr-3 text-xs"
+                style={{ color: "var(--ink-muted)" }}
+              >
+                {pair.number}
+              </td>
+              <td className="py-1.5 pr-3" style={{ color: "var(--ink)" }}>
+                {pair.white ?? ""}
+              </td>
+              <td className="py-1.5" style={{ color: "var(--ink)" }}>
+                {pair.black ?? ""}
+              </td>
             </tr>
           ))}
         </tbody>

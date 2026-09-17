@@ -6,7 +6,6 @@
  */
 
 import dynamic from "next/dynamic";
-import "@/app/paper-tokens.css";
 
 const PaperPawnsScene = dynamic(
   () =>
@@ -18,12 +17,15 @@ const PaperPawnsScene = dynamic(
 
 export default function ScenePreviewPage() {
   return (
-    <main className="relative h-dvh w-full overflow-hidden" style={{ background: "#e6dcc8" }}>
+    <main
+      className="relative h-dvh w-full overflow-hidden"
+      style={{ background: "var(--paper-page)" }}
+    >
       <p
         className="pointer-events-none absolute left-4 top-4 z-10 text-xs uppercase tracking-[0.18em]"
-        style={{ color: "#5c5346", fontFamily: "var(--font-print)", fontWeight: 500 }}
+        style={{ color: "var(--ink-muted)", fontWeight: 600 }}
       >
-        Scene preview · approve pawns before copy
+        Scene preview · two pawns
       </p>
       <PaperPawnsScene className="h-full w-full" />
     </main>

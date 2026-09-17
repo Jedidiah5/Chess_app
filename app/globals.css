@@ -8,7 +8,356 @@
 }
 
 body {
-  @apply bg-[#ebe4d6] text-stone-900 antialiased;
+  background: var(--paper-page);
+  color: var(--ink);
+  font-family: var(--font-print);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Page grain — light, static (no animated filters) */
+.paper-grain {
+  background-color: var(--paper-page);
+  background-image: radial-gradient(
+    rgba(60, 52, 40, 0.06) 0.55px,
+    transparent 0.65px
+  );
+  background-size: 3px 3px;
+}
+
+/* ——— Chrome primitives ——— */
+
+.paper-card {
+  background: var(--paper-card);
+  background-image: radial-gradient(
+    rgba(60, 52, 40, 0.055) 0.55px,
+    transparent 0.65px
+  );
+  background-size: 3px 3px;
+  box-shadow: 0 10px 22px var(--shadow-warm-soft);
+  padding: 1.35rem 1.4rem;
+  color: var(--ink);
+  transition: transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    box-shadow 180ms ease;
+}
+
+.paper-card--muted {
+  opacity: 0.78;
+  box-shadow: none;
+}
+
+a.paper-card:hover,
+button.paper-card:hover {
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 14px 26px var(--shadow-warm);
+}
+
+/*
+ * Buttons: letterpress plate — pencil contour, inked face, small caps.
+ * Only transform/opacity/shadow animate.
+ */
+.paper-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.7rem 1.6rem;
+  font-family: var(--font-print);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 170ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    box-shadow 170ms ease,
+    opacity 170ms ease;
+}
+
+.paper-btn:hover:not(:disabled) {
+  transform: translate3d(0, -1.5px, 0);
+}
+
+.paper-btn:active:not(:disabled) {
+  transform: translate3d(0, 1px, 0);
+}
+
+.paper-btn:focus-visible {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.paper-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paper-btn--primary {
+  background: var(--ink);
+  color: var(--paper-light);
+  box-shadow:
+    /* inner letterpress bevel */
+    inset 0 1px 0 rgba(255, 244, 230, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+    /* thin cream keyline, then warm drop */
+    0 0 0 1px rgba(246, 239, 225, 0.5),
+    0 7px 16px var(--shadow-warm-soft);
+}
+
+.paper-btn--primary:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 244, 230, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(246, 239, 225, 0.5),
+    0 12px 22px var(--shadow-warm);
+}
+
+.paper-btn--primary .paper-stroke {
+  color: rgba(246, 239, 225, 0.32);
+}
+
+.paper-btn--ghost {
+  background: var(--paper-card);
+  color: var(--ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 240, 0.7),
+    0 5px 12px var(--shadow-warm-soft);
+}
+
+.paper-btn--ghost:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 240, 0.7),
+    0 10px 20px var(--shadow-warm-soft);
+}
+
+.paper-btn--ghost .paper-stroke {
+  color: var(--ink);
+}
+
+.paper-link {
+  color: var(--ink);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--ink-faint);
+}
+
+.paper-link:hover {
+  text-decoration-color: var(--ink);
+}
+
+/* ——— Board-screen chrome ——— */
+
+/* Promotion choices — small pressed plates */
+.promo-option {
+  position: relative;
+  display: flex;
+  height: 3.75rem;
+  width: 3.75rem;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper-light);
+  box-shadow: inset 0 1px 0 rgba(255, 250, 240, 0.65);
+  transition: transform 150ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.promo-option:hover {
+  transform: translate3d(0, -1.5px, 0);
+}
+
+.promo-option:focus-visible {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/*
+ * Selectable row (difficulty, colour). The pencil contour comes from
+ * PencilFrame; the selected state inks the whole plate.
+ */
+.paper-option {
+  position: relative;
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.7rem 0.95rem;
+  background: var(--paper-light);
+  text-align: left;
+  transition:
+    transform 150ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.paper-option:hover {
+  transform: translate3d(0, -1px, 0);
+}
+
+.paper-option--on {
+  background: var(--ink);
+  color: var(--paper-light);
+}
+
+.paper-option--on .meta-caps,
+.paper-option--on .paper-option-note {
+  color: rgba(246, 239, 225, 0.72);
+}
+
+.paper-option-note {
+  color: var(--ink-muted);
+}
+
+/* Transient notice — ruled strip, not a coloured web banner */
+.paper-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--paper-card);
+  border-top: 1px solid var(--ink-faint);
+  border-bottom: 1px solid var(--ink-faint);
+  color: var(--ink);
+}
+
+/* Errors read as a red editor's mark, not a web alert box */
+.paper-alert {
+  font-size: 0.875rem;
+  color: #8c2f22;
+  border-left: 2px solid #8c2f22;
+  padding-left: 0.7rem;
+}
+
+/* Clock plate — tabular figures, inked when it's your turn to burn time */
+.clock-plate {
+  position: relative;
+  padding: 0.45rem 0.85rem;
+  background: var(--paper-card);
+  box-shadow: inset 0 1px 0 rgba(255, 250, 240, 0.6);
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.clock-plate--active {
+  background: var(--ink);
+  color: var(--paper-light);
+}
+
+.clock-plate--active .meta-caps {
+  color: rgba(246, 239, 225, 0.68);
+}
+
+.clock-plate--low {
+  background: #8c2f22;
+  color: #fdf6ea;
+}
+
+.clock-plate--low .meta-caps {
+  color: rgba(253, 246, 234, 0.75);
+}
+
+.clock-figure {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+/* Status line above the board — ruled, small caps, tabular */
+.status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--ink-faint);
+  border-bottom: 1px solid var(--ink-faint);
+}
+
+/* ——— Editorial type ——— */
+
+.meta-caps {
+  font-family: var(--font-print);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.print-rule {
+  display: block;
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--ink-faint);
+}
+
+.wordmark {
+  font-family: var(--font-print);
+  font-weight: 600;
+  font-size: clamp(4.5rem, 17vw, 11rem);
+  line-height: 0.84;
+  letter-spacing: -0.045em;
+  color: var(--ink);
+  /* Sits over the plate like overprinted type */
+  text-shadow: 0 1px 0 rgba(246, 239, 225, 0.55);
+}
+
+/* ——— Print finish ——— */
+
+/* Halftone dot screen over the plate — multiply keeps it inky, never grey */
+.halftone-screen {
+  background-image: radial-gradient(
+    var(--ink) 0.7px,
+    transparent 0.8px
+  );
+  background-size: 4px 4px;
+  opacity: 0.085;
+  mix-blend-mode: multiply;
+}
+
+.paper-vignette {
+  background:
+    radial-gradient(
+      120% 85% at 50% 42%,
+      transparent 38%,
+      rgba(232, 223, 204, 0.55) 78%,
+      rgba(232, 223, 204, 0.92) 100%
+    );
+}
+
+/* Landing hero enter — transform/opacity only */
+.landing-copy {
+  animation: landing-rise 700ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.landing-cta {
+  animation: landing-rise 760ms 120ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-copy,
+  .landing-cta,
+  .paper-card,
+  .paper-btn {
+    animation: none;
+    transition: none;
+  }
 }
 
 /*
@@ -79,39 +428,21 @@ body {
 }
 
 .game-over-card {
-  background: #f4efe4;
+  background: var(--paper-card);
   background-image: radial-gradient(
     rgba(60, 52, 40, 0.07) 0.55px,
     transparent 0.65px
   );
   background-size: 3px 3px;
-  border: 1.5px solid #2c2a26;
   box-shadow:
-    0 14px 28px rgba(70, 52, 30, 0.22),
-    inset 0 0 0 1px rgba(244, 239, 228, 0.8);
+    0 16px 32px var(--shadow-warm),
+    inset 0 1px 0 rgba(255, 250, 240, 0.7);
   animation: game-over-rise 280ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
 .game-over-headline {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-print);
   letter-spacing: -0.02em;
-}
-
-.game-over-btn-primary {
-  border: 1.5px solid #2c2a26;
-  background: #2c2a26;
-  color: #f4efe4;
-  border-radius: 2px;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.875rem;
-}
-
-.game-over-btn-primary:hover {
-  background: #3a3732;
-}
-
-.game-over-btn-primary:disabled {
-  opacity: 0.6;
 }
 
 @keyframes game-over-fade {

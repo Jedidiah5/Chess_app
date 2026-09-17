@@ -1,5 +1,7 @@
 "use client";
 
+import { PaperButton } from "@/components/ui/PaperButton";
+
 type GameControlsProps = {
   canAct: boolean;
   drawOfferPendingFromOpponent: boolean;
@@ -29,44 +31,28 @@ export function GameControls({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <button
-        type="button"
-        disabled={!canAct}
-        onClick={handleResign}
-        className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-50"
-      >
+    <div className="flex flex-wrap justify-center gap-3">
+      <PaperButton variant="ghost" disabled={!canAct} onClick={handleResign}>
         Resign
-      </button>
+      </PaperButton>
 
       {drawOfferPendingFromOpponent ? (
         <>
-          <button
-            type="button"
-            disabled={!canAct}
-            onClick={onAcceptDraw}
-            className="rounded-md bg-stone-800 px-3 py-2 text-sm text-white hover:bg-stone-700 disabled:opacity-50"
-          >
+          <PaperButton variant="primary" disabled={!canAct} onClick={onAcceptDraw}>
             Accept draw
-          </button>
-          <button
-            type="button"
-            disabled={!canAct}
-            onClick={onDeclineDraw}
-            className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-50"
-          >
+          </PaperButton>
+          <PaperButton variant="ghost" disabled={!canAct} onClick={onDeclineDraw}>
             Decline
-          </button>
+          </PaperButton>
         </>
       ) : (
-        <button
-          type="button"
+        <PaperButton
+          variant="ghost"
           disabled={!canAct || drawOfferPendingFromMe}
           onClick={onOfferDraw}
-          className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-50"
         >
           {drawOfferPendingFromMe ? "Draw offered" : "Offer draw"}
-        </button>
+        </PaperButton>
       )}
     </div>
   );

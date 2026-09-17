@@ -79,7 +79,6 @@ if (IS_LOCAL) {
   }
 
   const PRECACHE = [
-    "/",
     "/play",
     "/play/local",
     "/play/computer",

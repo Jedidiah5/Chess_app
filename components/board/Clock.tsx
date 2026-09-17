@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { PencilFrame } from "@/components/ui/PencilFrame";
 
 type ClockProps = {
   label: string;
@@ -64,9 +65,14 @@ export function Clock({
 
   if (!hasClock) {
     return (
-      <div className="rounded-md border border-stone-200 bg-white px-3 py-2 text-sm">
-        <p className="text-xs uppercase tracking-wide text-stone-500">{label}</p>
-        <p className="font-mono text-lg text-stone-800">∞</p>
+      <div className="clock-plate">
+        <PencilFrame
+          className="pointer-events-none absolute inset-0 h-full w-full text-[var(--ink)]"
+          strokeWidth={1.3}
+          inset={2}
+        />
+        <p className="meta-caps relative z-[1]">{label}</p>
+        <p className="clock-figure relative z-[1]">∞</p>
       </div>
     );
   }
@@ -76,22 +82,22 @@ export function Clock({
   return (
     <div
       className={[
-        "rounded-md border px-3 py-2 text-sm",
-        isActive ? "border-stone-800 bg-stone-800 text-white" : "border-stone-200 bg-white",
-        low && isActive ? "border-red-700 bg-red-700" : "",
+        "clock-plate",
+        isActive ? "clock-plate--active" : "",
+        low && isActive ? "clock-plate--low" : "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      <p
-        className={[
-          "text-xs uppercase tracking-wide",
-          isActive ? "text-stone-300" : "text-stone-500",
-        ].join(" ")}
-      >
-        {label}
-      </p>
-      <p className="font-mono text-lg tabular-nums">{formatMs(displayMs)}</p>
+      <PencilFrame
+        className={`pointer-events-none absolute inset-0 h-full w-full ${
+          isActive ? "" : "text-[var(--ink)]"
+        }`}
+        strokeWidth={1.3}
+        inset={2}
+      />
+      <p className="meta-caps relative z-[1]">{label}</p>
+      <p className="clock-figure relative z-[1]">{formatMs(displayMs)}</p>
     </div>
   );
 }

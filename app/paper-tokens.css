@@ -1,10 +1,11 @@
 /**
- * Phase 1.5 paper tokens — palette only until knight is approved.
+ * Paper / ink design tokens — classic print aesthetic.
  */
 :root {
   /* Page / board surroundings */
   --paper-page: #e6dcc8;
   --paper-page-deep: #d8cdb6;
+  --paper-card: #f2ebe0;
 
   /* Squares — warm off-white vs muted ink wash (not B/W) */
   --paper-light: #f2e8d5;
@@ -26,7 +27,7 @@
   --shadow-warm-soft: rgba(92, 58, 28, 0.14);
   --shadow-warm-tight: rgba(70, 42, 18, 0.35);
 
-  /* Type — letterpress-ish, two weights */
+  /* Type — letterpress-ish, two weights (Newsreader via next/font) */
   --font-print: var(--font-newsreader), "Iowan Old Style", "Palatino Linotype",
     Palatino, "Book Antiqua", Georgia, serif;
 }

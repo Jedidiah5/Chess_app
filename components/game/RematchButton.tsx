@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createRematch } from "@/lib/supabase/functions";
+import { PaperButton } from "@/components/ui/PaperButton";
 
 type RematchButtonProps = {
   gameId: string;
@@ -32,21 +33,16 @@ export function RematchButton({ gameId, className }: RematchButtonProps) {
   }
 
   return (
-    <div>
-      <button
-        type="button"
+    <div className="flex flex-col items-center">
+      <PaperButton
+        variant="primary"
         disabled={loading}
         onClick={handleRematch}
-        className={
-          className ??
-          "rounded-md bg-stone-800 px-3 py-2 text-sm text-white hover:bg-stone-700 disabled:opacity-60"
-        }
+        className={className}
       >
         {loading ? "Creating…" : "Rematch"}
-      </button>
-      {errorMessage && (
-        <p className="mt-1 text-xs text-red-700">{errorMessage}</p>
-      )}
+      </PaperButton>
+      {errorMessage && <p className="paper-alert mt-2">{errorMessage}</p>}
     </div>
   );
 }

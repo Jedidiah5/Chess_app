@@ -2,77 +2,156 @@
 
 import Link from "next/link";
 import { useOnlineStatus } from "@/components/offline/OfflineUI";
+import { PaperButton } from "@/components/ui/PaperButton";
+import { PaperCard } from "@/components/ui/PaperCard";
+import { PencilFrame } from "@/components/ui/PencilFrame";
+
+function ModeCard({
+  href,
+  index,
+  title,
+  blurb,
+  note,
+}: {
+  href: string;
+  index: string;
+  title: string;
+  blurb: string;
+  note: string;
+}) {
+  return (
+    <Link href={href} className="paper-card relative block">
+      <PencilFrame
+        className="paper-stroke pointer-events-none absolute inset-0 h-full w-full text-[var(--ink)]"
+        strokeWidth={1.7}
+      />
+      <div className="relative z-[1] flex items-start gap-4">
+        <span className="meta-caps mt-1.5 tabular-nums">{index}</span>
+        <div className="min-w-0 flex-1">
+          <h2
+            className="text-xl font-semibold tracking-tight"
+            style={{ color: "var(--ink)" }}
+          >
+            {title}
+          </h2>
+          <p
+            className="mt-1.5 text-sm leading-relaxed"
+            style={{ color: "var(--ink-muted)" }}
+          >
+            {blurb}
+          </p>
+          <p className="meta-caps mt-3">{note}</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 export default function PlayPage() {
   const online = useOnlineStatus();
 
   return (
-    <main className="min-h-screen bg-[#ebe4d6] px-4 py-12">
-      <div className="mx-auto max-w-md space-y-4">
-        <header className="text-center">
-          <h1 className="text-2xl font-semibold text-stone-900">Play chess</h1>
-          <p className="mt-2 text-sm text-stone-600">Choose how you want to play.</p>
+    <main className="relative min-h-dvh bg-[var(--paper-page)] px-5 py-10 sm:py-14">
+      <div className="halftone-screen pointer-events-none fixed inset-0" aria-hidden />
+
+      <div className="relative mx-auto w-full max-w-lg">
+        <header>
+          <div className="flex items-center gap-4">
+            <span className="print-rule" aria-hidden />
+            <span className="meta-caps whitespace-nowrap">Choose a board</span>
+            <span className="print-rule" aria-hidden />
+          </div>
+          <h1
+            className="mt-6 text-center text-5xl font-semibold tracking-[-0.035em]"
+            style={{ color: "var(--ink)" }}
+          >
+            Play
+          </h1>
+          <p
+            className="mt-3 text-center text-sm"
+            style={{ color: "var(--ink-muted)" }}
+          >
+            Three ways to move a piece.
+          </p>
         </header>
 
-        {online ? (
-          <Link
-            href="/play/online"
-            className="block rounded-lg border border-stone-200 bg-white p-6 shadow-sm transition hover:border-stone-300 hover:shadow"
-          >
-            <h2 className="text-lg font-semibold text-stone-900">Play online</h2>
-            <p className="mt-1 text-sm text-stone-600">
-              Create a game and invite a friend with a link.
-            </p>
-          </Link>
-        ) : (
-          <div className="rounded-lg border border-dashed border-stone-300 bg-white/70 p-6">
-            <h2 className="text-lg font-semibold text-stone-900">Play online</h2>
-            <p className="mt-1 text-sm text-stone-600">
-              You&apos;re offline — online play needs a connection.
-            </p>
-          </div>
-        )}
+        <div className="mt-9 space-y-4">
+          {online ? (
+            <ModeCard
+              href="/play/online"
+              index="01"
+              title="Play online"
+              blurb="Create a game and invite a friend with a link."
+              note="Rated · Live clocks"
+            />
+          ) : (
+            <PaperCard muted>
+              <div className="flex items-start gap-4">
+                <span className="meta-caps mt-1.5 tabular-nums">01</span>
+                <div>
+                  <h2
+                    className="text-xl font-semibold tracking-tight"
+                    style={{ color: "var(--ink)" }}
+                  >
+                    Play online
+                  </h2>
+                  <p
+                    className="mt-1.5 text-sm leading-relaxed"
+                    style={{ color: "var(--ink-muted)" }}
+                  >
+                    You&apos;re offline — online play needs a connection.
+                  </p>
+                  <p className="meta-caps mt-3">Unavailable offline</p>
+                </div>
+              </div>
+            </PaperCard>
+          )}
 
-        <Link
-          href="/play/computer"
-          className="block rounded-lg border border-stone-200 bg-white p-6 shadow-sm transition hover:border-stone-300 hover:shadow"
-        >
-          <h2 className="text-lg font-semibold text-stone-900">Vs computer</h2>
-          <p className="mt-1 text-sm text-stone-600">
-            Stockfish on-device. Works offline. Always unrated.
-          </p>
-        </Link>
+          <ModeCard
+            href="/play/computer"
+            index="02"
+            title="Vs computer"
+            blurb="Stockfish on-device, four strengths, no connection needed."
+            note="Unrated · Works offline"
+          />
 
-        <Link
-          href="/play/local"
-          className="block rounded-lg border border-stone-200 bg-white p-6 shadow-sm transition hover:border-stone-300 hover:shadow"
-        >
-          <h2 className="text-lg font-semibold text-stone-900">Pass &amp; play</h2>
-          <p className="mt-1 text-sm text-stone-600">
-            Two players on one device. No account needed.
-          </p>
-        </Link>
+          <ModeCard
+            href="/play/local"
+            index="03"
+            title="Pass & play"
+            blurb="Two players, one device. No account required."
+            note="Unrated · Works offline"
+          />
+        </div>
 
-        <div className="flex justify-center gap-4 pt-2 text-sm">
+        <div className="mt-10 flex items-center gap-4">
+          <span className="print-rule" aria-hidden />
+          <span className="meta-caps whitespace-nowrap">Records</span>
+          <span className="print-rule" aria-hidden />
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           {online ? (
             <>
-              <Link
-                href="/leaderboard"
-                className="text-stone-700 underline-offset-2 hover:underline"
-              >
+              <PaperButton href="/leaderboard" variant="ghost" className="min-w-[9.5rem]">
                 Leaderboard
-              </Link>
-              <Link
-                href="/games"
-                className="text-stone-700 underline-offset-2 hover:underline"
-              >
+              </PaperButton>
+              <PaperButton href="/games" variant="ghost" className="min-w-[9.5rem]">
                 Archive
-              </Link>
+              </PaperButton>
             </>
           ) : (
-            <span className="text-stone-500">Leaderboard &amp; archive need a connection</span>
+            <p className="meta-caps text-center">
+              Leaderboard &amp; archive need a connection
+            </p>
           )}
         </div>
+
+        <footer className="mt-10 text-center">
+          <Link href="/" className="paper-link text-sm font-semibold">
+            Home
+          </Link>
+        </footer>
       </div>
     </main>
   );
