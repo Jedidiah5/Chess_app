@@ -7,15 +7,16 @@ function isSupabaseRequest(url) {
   if (host.includes("supabase.co") || host.includes("supabase.in")) {
     return true;
   }
-  // Local supabase or custom API host via env is covered by path heuristics below
-  // when the app proxies — prefer host match.
   return false;
 }
 
 function isOnlineOnlyNavigation(pathname) {
   if (pathname.startsWith("/play/online")) return true;
-  if (pathname.startsWith("/play/") && !pathname.startsWith("/play/local") && !pathname.startsWith("/play/computer")) {
-    // /play/[gameId] live games
+  if (
+    pathname.startsWith("/play/") &&
+    !pathname.startsWith("/play/local") &&
+    !pathname.startsWith("/play/computer")
+  ) {
     if (pathname !== "/play") return true;
   }
   if (pathname.startsWith("/leaderboard")) return true;
@@ -25,6 +26,19 @@ function isOnlineOnlyNavigation(pathname) {
   if (pathname.startsWith("/login") || pathname.startsWith("/username")) return true;
   if (pathname.startsWith("/api/")) return true;
   return false;
+}
+
+function isNextAsset(pathname) {
+  return pathname.startsWith("/_next/");
+}
+
+function isImmutableStatic(pathname) {
+  // Hashed build assets are safe to cache-first.
+  return (
+    pathname.startsWith("/_next/static/") ||
+    pathname.startsWith("/stockfish/") ||
+    pathname.startsWith("/icons/")
+  );
 }
 
 const PRECACHE = [
@@ -91,12 +105,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Same-origin only for caching strategy.
   if (url.origin !== self.location.origin) {
     return;
   }
 
   const pathname = url.pathname;
+  const cachePromise = caches.open(CACHE_VERSION);
 
   // Online-only routes: network only; offline → fallback page.
   if (request.mode === "navigate" && isOnlineOnlyNavigation(pathname)) {
@@ -105,7 +119,7 @@ self.addEventListener("fetch", (event) => {
         try {
           return await fetch(request);
         } catch {
-          const cache = await caches.open(CACHE_VERSION);
+          const cache = await cachePromise;
           return (
             (await cache.match(OFFLINE_FALLBACK)) ||
             new Response("Offline", { status: 503, statusText: "Offline" })
@@ -116,34 +130,72 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigations + static: cache-first from versioned cache, network fallback.
-  event.respondWith(
-    (async () => {
-      const cache = await caches.open(CACHE_VERSION);
-      const cached = await cache.match(request);
-      if (cached) {
-        return cached;
-      }
-
-      try {
-        const response = await fetch(request);
-        // Runtime cache same-origin successful GETs (app shell + hashed assets).
-        if (response.ok && response.type === "basic") {
-          // Do not cache API responses even if same-origin.
-          if (!pathname.startsWith("/api/")) {
+  // Navigations: network-first so deploys / HMR are never stuck on stale HTML.
+  if (request.mode === "navigate") {
+    event.respondWith(
+      (async () => {
+        const cache = await cachePromise;
+        try {
+          const response = await fetch(request);
+          if (response.ok) {
             void cache.put(request, response.clone());
           }
-        }
-        return response;
-      } catch {
-        if (request.mode === "navigate") {
+          return response;
+        } catch {
           return (
+            (await cache.match(request)) ||
             (await cache.match(OFFLINE_FALLBACK)) ||
             (await cache.match("/play")) ||
             new Response("Offline", { status: 503, statusText: "Offline" })
           );
         }
-        return new Response("Offline", { status: 503, statusText: "Offline" });
+      })(),
+    );
+    return;
+  }
+
+  // Next.js non-hashed / HMR paths: always network (never cache).
+  if (isNextAsset(pathname) && !isImmutableStatic(pathname)) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Hashed static + Stockfish: cache-first.
+  if (isImmutableStatic(pathname)) {
+    event.respondWith(
+      (async () => {
+        const cache = await cachePromise;
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        try {
+          const response = await fetch(request);
+          if (response.ok && response.type === "basic") {
+            void cache.put(request, response.clone());
+          }
+          return response;
+        } catch {
+          return new Response("Offline", { status: 503, statusText: "Offline" });
+        }
+      })(),
+    );
+    return;
+  }
+
+  // Everything else: network-first, cache fallback.
+  event.respondWith(
+    (async () => {
+      const cache = await cachePromise;
+      try {
+        const response = await fetch(request);
+        if (response.ok && response.type === "basic" && !pathname.startsWith("/api/")) {
+          void cache.put(request, response.clone());
+        }
+        return response;
+      } catch {
+        return (
+          (await cache.match(request)) ||
+          new Response("Offline", { status: 503, statusText: "Offline" })
+        );
       }
     })(),
   );
