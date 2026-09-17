@@ -27,10 +27,13 @@ import {
   fetchInviteCode,
   fetchMoves,
   fetchServerNow,
-  gameResultLabel,
   touchPresence,
 } from "@/lib/supabase/games";
 import { RematchButton } from "@/components/game/RematchButton";
+import {
+  GameOverModal,
+  onlineEndReasonLabel,
+} from "@/components/game/GameOverModal";
 import { subscribeToGame, unsubscribeFromGame } from "@/lib/supabase/realtime";
 import type { GameRow, MoveRow } from "@/types/game";
 
@@ -85,6 +88,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
   const [opponentPresent, setOpponentPresent] = useState(true);
   const [presenceReady, setPresenceReady] = useState(false);
   const [disconnectSeconds, setDisconnectSeconds] = useState<number | null>(null);
+  const [dismissedOver, setDismissedOver] = useState(false);
 
   const confirmedPlyRef = useRef(0);
   const submittingRef = useRef(false);
@@ -152,6 +156,9 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
       setSelectedSquare(null);
       setPendingPromotion(null);
       confirmedPlyRef.current = nextGame.ply;
+      if (nextGame.status !== "finished") {
+        setDismissedOver(false);
+      }
 
       if (delta > 2 || delta < 0 || prevBoard.length === 0) {
         snapTo(nextEngine.board, null);
@@ -577,10 +584,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     headerText = "Waiting for opponent…";
   } else if (game.status === "finished" || game.status === "abandoned") {
     headerText =
-      game.status === "abandoned"
-        ? "Game abandoned"
-        : gameResultLabel(game.result, game.reason, userId, game.white_id) ??
-          "Game over";
+      game.status === "abandoned" ? "Game abandoned" : "Game over";
   } else if (isMyTurn) {
     headerText = `Your turn${engine.inCheck ? " — Check!" : ""}`;
   } else {
@@ -682,12 +686,37 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
           )}
 
           {game.status === "finished" && (
-            <div className="flex flex-col items-center gap-3">
-              <p className="text-sm text-stone-600">
-                {gameResultLabel(game.result, game.reason, userId, game.white_id)}
-              </p>
-              <RematchButton gameId={game.id} />
-            </div>
+            <>
+              {!dismissedOver &&
+                (() => {
+                  const copy = onlineEndReasonLabel(
+                    game.result,
+                    game.reason,
+                    userId,
+                    game.white_id,
+                  );
+                  return (
+                    <GameOverModal
+                      open
+                      headline={copy.headline}
+                      reason={copy.reason}
+                      onDismiss={() => setDismissedOver(true)}
+                      dismissLabel="Close"
+                      actions={
+                        <RematchButton
+                          gameId={game.id}
+                          className="game-over-btn-primary"
+                        />
+                      }
+                    />
+                  );
+                })()}
+              {dismissedOver && (
+                <div className="flex flex-col items-center gap-3">
+                  <RematchButton gameId={game.id} />
+                </div>
+              )}
+            </>
           )}
 
           <Link

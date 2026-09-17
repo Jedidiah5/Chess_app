@@ -6,9 +6,10 @@ import { createRematch } from "@/lib/supabase/functions";
 
 type RematchButtonProps = {
   gameId: string;
+  className?: string;
 };
 
-export function RematchButton({ gameId }: RematchButtonProps) {
+export function RematchButton({ gameId, className }: RematchButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -36,12 +37,15 @@ export function RematchButton({ gameId }: RematchButtonProps) {
         type="button"
         disabled={loading}
         onClick={handleRematch}
-        className="rounded-md bg-stone-800 px-3 py-2 text-sm text-white hover:bg-stone-700 disabled:opacity-60"
+        className={
+          className ??
+          "rounded-md bg-stone-800 px-3 py-2 text-sm text-white hover:bg-stone-700 disabled:opacity-60"
+        }
       >
         {loading ? "Creating…" : "Rematch"}
       </button>
       {errorMessage && (
-        <p className="mt-1 text-xs text-red-600">{errorMessage}</p>
+        <p className="mt-1 text-xs text-red-700">{errorMessage}</p>
       )}
     </div>
   );

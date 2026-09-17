@@ -5,12 +5,16 @@ import { Board, findKingSquare } from "@/components/board/Board";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
 import {
+  GameOverModal,
+  localEndReasonLabel,
+} from "@/components/game/GameOverModal";
+import {
   buildAnimMoveFromCommit,
   useMoveAnimator,
 } from "@/components/board/useMoveAnimator";
 import { createEngine, isPromotionMove } from "@/lib/chess/engine";
 import type { BoardOrientation, Promotion, Square } from "@/lib/chess/types";
-import { displayColor, endReasonLabel } from "@/lib/chess/types";
+import { displayColor } from "@/lib/chess/types";
 
 type PendingPromotion = {
   from: Square;
@@ -22,6 +26,7 @@ export default function LocalPlayPage() {
   const [orientation, setOrientation] = useState<BoardOrientation>("white");
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
+  const [dismissedOver, setDismissedOver] = useState(false);
 
   const {
     motionPieces,
@@ -122,6 +127,7 @@ export default function LocalPlayPage() {
     setEngine(fresh);
     setSelectedSquare(null);
     setPendingPromotion(null);
+    setDismissedOver(false);
     snapTo(fresh.board, null);
   }, [snapTo]);
 
@@ -131,16 +137,10 @@ export default function LocalPlayPage() {
 
   const turnLabel = displayColor(engine.turn);
   const terminal = engine.terminal;
-
-  let resultText: string | null = null;
-  if (terminal.over) {
-    if (terminal.result === "draw") {
-      resultText = `Draw — ${endReasonLabel(terminal.reason)}`;
-    } else {
-      const winner = terminal.result === "white" ? "White" : "Black";
-      resultText = `${winner} wins — ${endReasonLabel(terminal.reason)}`;
-    }
-  }
+  const overCopy =
+    terminal.over
+      ? localEndReasonLabel(terminal.result, terminal.reason)
+      : null;
 
   return (
     <main className="min-h-screen bg-[#ebe4d6] px-4 py-8">
@@ -156,9 +156,7 @@ export default function LocalPlayPage() {
                 {engine.inCheck ? " — Check!" : ""}
               </p>
             ) : (
-              <p className="mt-1 text-lg font-medium text-stone-800">
-                {resultText}
-              </p>
+              <p className="mt-1 text-stone-600">Game over</p>
             )}
           </header>
 
@@ -203,6 +201,25 @@ export default function LocalPlayPage() {
           color={engine.turn}
           onSelect={handlePromotionSelect}
           onCancel={() => setPendingPromotion(null)}
+        />
+      )}
+
+      {overCopy && (
+        <GameOverModal
+          open={!dismissedOver}
+          headline={overCopy.headline}
+          reason={overCopy.reason}
+          onDismiss={() => setDismissedOver(true)}
+          dismissLabel="Close"
+          actions={
+            <button
+              type="button"
+              className="game-over-btn-primary"
+              onClick={handleNewGame}
+            >
+              New game
+            </button>
+          }
         />
       )}
     </main>
