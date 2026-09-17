@@ -286,13 +286,11 @@ export default function LocalPlayPage() {
           <PaperCard>
             <h2 className="meta-caps">Score sheet</h2>
             <div className="mt-3">
-              <MoveList
-                history={
-                  engine.history.length
-                    ? engine.history
-                    : moves.map((m) => m.san)
-                }
-              />
+              {/*
+                `moves` is the accumulated record. The engine is rebuilt from
+                FEN on every commit, so engine.history only holds the last move.
+              */}
+              <MoveList history={moves.map((m) => m.san)} />
             </div>
           </PaperCard>
         </aside>

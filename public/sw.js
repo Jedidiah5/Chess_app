@@ -1,4 +1,4 @@
-const CACHE_VERSION = "chess-vW_wdTAg9xcLb";
+const CACHE_VERSION = "chess-vj0j7LLXsn_aa";
 const OFFLINE_FALLBACK = "/offline";
 
 const IS_LOCAL =
