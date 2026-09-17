@@ -164,19 +164,23 @@ if (IS_LOCAL) {
       return;
     }
 
+    // Never cache or intercept the one-shot SW reset page.
+    if (pathname === "/clear-sw.html") {
+      event.respondWith(fetch(request));
+      return;
+    }
+
+    // Network-first for app HTML. Do NOT cache Next navigations — hashed
+    // /_next chunks change every build; stale HTML + missing chunks surfaces
+    // as CSP script-src 'none' and blank pages.
     if (request.mode === "navigate") {
       event.respondWith(
         (async () => {
           const cache = await cachePromise;
           try {
-            const response = await fetch(request);
-            if (response.ok) {
-              void cache.put(request, response.clone());
-            }
-            return response;
+            return await fetch(request);
           } catch {
             return (
-              (await cache.match(request)) ||
               (await cache.match(OFFLINE_FALLBACK)) ||
               (await cache.match("/play")) ||
               new Response("Offline", { status: 503, statusText: "Offline" })

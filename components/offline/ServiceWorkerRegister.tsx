@@ -22,17 +22,17 @@ export function ServiceWorkerRegister() {
 
     if (local) {
       void (async () => {
+        const hadController = Boolean(navigator.serviceWorker.controller);
         const regs = await navigator.serviceWorker.getRegistrations();
         await Promise.all(regs.map((reg) => reg.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(
-            keys
-              .filter(
-                (key) => key.startsWith("chess-v") || key.startsWith("workbox-"),
-              )
-              .map((key) => caches.delete(key)),
-          );
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+        // Controller was serving a poisoned page; one hard reload clears it.
+        if (hadController && !sessionStorage.getItem("chess-sw-reloaded")) {
+          sessionStorage.setItem("chess-sw-reloaded", "1");
+          window.location.reload();
         }
       })();
       return;
