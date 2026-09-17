@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Board, findKingSquare } from "@/components/board/Board";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
@@ -12,9 +13,18 @@ import {
   buildAnimMoveFromCommit,
   useMoveAnimator,
 } from "@/components/board/useMoveAnimator";
-import { createEngine, isPromotionMove } from "@/lib/chess/engine";
+import { createEngine, isPromotionMove, tryMoveUci } from "@/lib/chess/engine";
 import type { BoardOrientation, Promotion, Square } from "@/lib/chess/types";
 import { displayColor } from "@/lib/chess/types";
+import {
+  clearActiveOfflineGame,
+  getActiveOfflineGame,
+  newOfflineId,
+  saveActiveOfflineGame,
+  saveFinishedOfflineGame,
+  type OfflineMove,
+} from "@/lib/offline/db";
+import { uploadOfflineGame } from "@/lib/offline/upload";
 
 type PendingPromotion = {
   from: Square;
@@ -27,6 +37,9 @@ export default function LocalPlayPage() {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
   const [dismissedOver, setDismissedOver] = useState(false);
+  const [moves, setMoves] = useState<OfflineMove[]>([]);
+  const [gameId, setGameId] = useState(() => newOfflineId());
+  const [ready, setReady] = useState(false);
 
   const {
     motionPieces,
@@ -37,10 +50,48 @@ export default function LocalPlayPage() {
   } = useMoveAnimator({ orientation });
 
   useEffect(() => {
-    snapTo(engine.board, null);
-    // initial only
+    let cancelled = false;
+    void (async () => {
+      try {
+        const active = await getActiveOfflineGame();
+        if (!cancelled && active?.mode === "local") {
+          const restored = createEngine(active.fen);
+          setEngine(restored);
+          setMoves(active.moves);
+          setGameId(active.id === "current" ? newOfflineId() : active.id);
+          snapTo(restored.board, null);
+        } else if (!cancelled) {
+          snapTo(engine.board, null);
+        }
+      } catch {
+        if (!cancelled) snapTo(engine.board, null);
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const persistActive = useCallback(
+    async (fen: string, historySan: string[], nextMoves: OfflineMove[]) => {
+      try {
+        await saveActiveOfflineGame({
+          mode: "local",
+          fen,
+          historySan,
+          moves: nextMoves,
+          playerColor: "w",
+          level: null,
+        });
+      } catch {
+        // ignore
+      }
+    },
+    [],
+  );
 
   const legalTargets = useMemo(() => {
     if (!selectedSquare || busy) {
@@ -64,14 +115,42 @@ export default function LocalPlayPage() {
       if (!outcome.ok) {
         return false;
       }
+      const uci = `${from}${to}${promotion ?? ""}`;
+      const applied = tryMoveUci(engine.fen, uci);
+      const san = applied.ok ? applied.san : "?";
+      const nextMoves: OfflineMove[] = [
+        ...moves,
+        { ply: moves.length + 1, san, uci, fen_after: next.fen },
+      ];
+
       const anim = buildAnimMoveFromCommit(prev, from, to, next.board, promotion);
       setEngine(next);
+      setMoves(nextMoves);
       setSelectedSquare(null);
       setPendingPromotion(null);
       playMove(anim, next.board);
+      void persistActive(next.fen, next.history, nextMoves);
+
+      if (next.terminal.over && next.terminal.result && next.terminal.reason) {
+        const finished = {
+          id: gameId,
+          mode: "local" as const,
+          result: next.terminal.result,
+          reason: next.terminal.reason,
+          fen: next.fen,
+          moves: nextMoves,
+          playerColor: "w" as const,
+          level: null,
+          endedAt: new Date().toISOString(),
+          uploaded: false,
+        };
+        void saveFinishedOfflineGame(finished).then(() =>
+          uploadOfflineGame(finished),
+        );
+      }
       return true;
     },
-    [engine.board, engine.fen, playMove],
+    [engine.board, engine.fen, engine.history, gameId, moves, persistActive, playMove],
   );
 
   const handleSquareTap = useCallback(
@@ -125,10 +204,13 @@ export default function LocalPlayPage() {
   const handleNewGame = useCallback(() => {
     const fresh = createEngine();
     setEngine(fresh);
+    setMoves([]);
+    setGameId(newOfflineId());
     setSelectedSquare(null);
     setPendingPromotion(null);
     setDismissedOver(false);
     snapTo(fresh.board, null);
+    void clearActiveOfflineGame();
   }, [snapTo]);
 
   const toggleOrientation = useCallback(() => {
@@ -141,6 +223,14 @@ export default function LocalPlayPage() {
     terminal.over
       ? localEndReasonLabel(terminal.result, terminal.reason)
       : null;
+
+  if (!ready) {
+    return (
+      <main className="min-h-screen bg-[#ebe4d6] px-4 py-12 text-center text-stone-600">
+        Loading…
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#ebe4d6] px-4 py-8">
@@ -156,7 +246,7 @@ export default function LocalPlayPage() {
                 {engine.inCheck ? " — Check!" : ""}
               </p>
             ) : (
-              <p className="mt-1 text-stone-600">Game over</p>
+              <p className="mt-1 text-stone-600">Game over · unrated</p>
             )}
           </header>
 
@@ -185,6 +275,12 @@ export default function LocalPlayPage() {
             >
               Flip board
             </button>
+            <Link
+              href="/play"
+              className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 hover:bg-stone-50"
+            >
+              Menu
+            </Link>
           </div>
         </section>
 
@@ -192,7 +288,7 @@ export default function LocalPlayPage() {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">
             Moves
           </h2>
-          <MoveList history={engine.history} />
+          <MoveList history={engine.history.length ? engine.history : moves.map((m) => m.san)} />
         </aside>
       </div>
 

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { OfflineGate } from "@/components/offline/OfflineUI";
 import { TIME_CONTROLS } from "@/lib/chess/timeControl";
 import { createGame } from "@/lib/supabase/functions";
 import type { TimeControl } from "@/types/game";
@@ -32,54 +33,56 @@ export default function PlayOnlinePage() {
   }
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-12">
-      <div className="mx-auto max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-stone-900">Play online</h1>
-        <p className="mt-2 text-sm text-stone-600">
-          Choose a time control, create a game, and share the invite link.
-        </p>
-
-        <fieldset className="mt-6 space-y-2">
-          <legend className="text-sm font-medium text-stone-700">Time control</legend>
-          {(Object.keys(TIME_CONTROLS) as TimeControl[]).map((key) => (
-            <label
-              key={key}
-              className="flex cursor-pointer items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
-            >
-              <input
-                type="radio"
-                name="timeControl"
-                value={key}
-                checked={timeControl === key}
-                onChange={() => setTimeControl(key)}
-              />
-              {TIME_CONTROLS[key].label}
-            </label>
-          ))}
-        </fieldset>
-
-        {errorMessage && (
-          <p className="mt-4 text-sm text-red-600" role="alert">
-            {errorMessage}
+    <OfflineGate feature="Online play">
+      <main className="min-h-screen bg-stone-100 px-4 py-12">
+        <div className="mx-auto max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-semibold text-stone-900">Play online</h1>
+          <p className="mt-2 text-sm text-stone-600">
+            Choose a time control, create a game, and share the invite link.
           </p>
-        )}
 
-        <button
-          type="button"
-          onClick={handleCreateGame}
-          disabled={loading}
-          className="mt-6 w-full rounded-md bg-stone-800 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
-        >
-          {loading ? "Creating…" : "Create game"}
-        </button>
+          <fieldset className="mt-6 space-y-2">
+            <legend className="text-sm font-medium text-stone-700">Time control</legend>
+            {(Object.keys(TIME_CONTROLS) as TimeControl[]).map((key) => (
+              <label
+                key={key}
+                className="flex cursor-pointer items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
+              >
+                <input
+                  type="radio"
+                  name="timeControl"
+                  value={key}
+                  checked={timeControl === key}
+                  onChange={() => setTimeControl(key)}
+                />
+                {TIME_CONTROLS[key].label}
+              </label>
+            ))}
+          </fieldset>
 
-        <Link
-          href="/play"
-          className="mt-4 block text-center text-sm text-stone-600 underline-offset-2 hover:underline"
-        >
-          Back to play menu
-        </Link>
-      </div>
-    </main>
+          {errorMessage && (
+            <p className="mt-4 text-sm text-red-600" role="alert">
+              {errorMessage}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleCreateGame}
+            disabled={loading}
+            className="mt-6 w-full rounded-md bg-stone-800 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
+          >
+            {loading ? "Creating…" : "Create game"}
+          </button>
+
+          <Link
+            href="/play"
+            className="mt-4 block text-center text-sm text-stone-600 underline-offset-2 hover:underline"
+          >
+            Back to play menu
+          </Link>
+        </div>
+      </main>
+    </OfflineGate>
   );
 }

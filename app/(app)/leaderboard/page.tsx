@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OnlineOnly } from "@/components/offline/OnlineOnly";
 import { createClient } from "@/lib/supabase/server";
 import {
   fetchLeaderboardTop,
@@ -29,6 +30,7 @@ export default async function LeaderboardPage() {
       : 0;
 
   return (
+    <OnlineOnly feature="The leaderboard">
     <main className="min-h-screen bg-stone-100 px-4 py-12">
       <div className="mx-auto max-w-2xl">
         <header className="mb-8 flex items-end justify-between gap-4">
@@ -112,5 +114,6 @@ export default async function LeaderboardPage() {
         </div>
       </div>
     </main>
+    </OnlineOnly>
   );
 }

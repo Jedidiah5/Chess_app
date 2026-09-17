@@ -1,0 +1,1 @@
+Stockfish.js is GPLv3. See https://github.com/nmrugg/stockfish.js

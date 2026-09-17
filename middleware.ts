@@ -4,10 +4,15 @@ import { createClient } from "@/lib/supabase/middleware";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { isOnboarded } from "@/types/profile";
 
-const PUBLIC_PREFIXES = ["/play/local", "/auth/callback"];
+const PUBLIC_PREFIXES = [
+  "/play/local",
+  "/play/computer",
+  "/offline",
+  "/auth/callback",
+];
 
 function isPublicPath(pathname: string): boolean {
-  if (pathname === "/") {
+  if (pathname === "/" || pathname === "/play") {
     return true;
   }
   return PUBLIC_PREFIXES.some(
@@ -20,7 +25,11 @@ function isAppPath(pathname: string): boolean {
     return true;
   }
   if (pathname === "/play" || pathname.startsWith("/play/")) {
-    return pathname !== "/play/local" && !pathname.startsWith("/play/local/");
+    // Mode picker + offline modes are public; online/live games stay gated.
+    if (isPublicPath(pathname)) {
+      return false;
+    }
+    return true;
   }
   if (pathname.startsWith("/join/")) {
     return true;
@@ -112,6 +121,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|stockfish/|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|wasm)$).*)",
   ],
 };

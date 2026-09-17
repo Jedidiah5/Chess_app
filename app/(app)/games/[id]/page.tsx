@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { GameReplay } from "@/components/game/GameReplay";
 import { RematchButton } from "@/components/game/RematchButton";
+import { CacheOnlineGameEffect } from "@/components/offline/CacheOnlineGameEffect";
 import { createClient } from "@/lib/supabase/server";
 import { fetchMoves, gameResultLabel } from "@/lib/supabase/games";
 import { fetchGameForReplay } from "@/lib/supabase/stats";
@@ -54,6 +55,22 @@ export default async function GameReplayPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-stone-100 px-4 py-8">
+      <CacheOnlineGameEffect
+        id={game.id}
+        whiteUsername={whiteName}
+        blackUsername={blackName}
+        result={game.result}
+        reason={game.reason}
+        rated={game.rated}
+        fen={game.current_fen}
+        endedAt={game.ended_at}
+        moves={moves.map((move) => ({
+          ply: move.ply,
+          san: move.san,
+          uci: move.uci,
+          fen_after: move.fen_after,
+        }))}
+      />
       <div className="mx-auto mb-6 flex max-w-4xl flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-stone-900">
