@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Newsreader } from "next/font/google";
+import {
+  Cinzel,
+  Cormorant_Garamond,
+  Newsreader,
+  Space_Mono,
+} from "next/font/google";
 import "./paper-tokens.css";
 import "./globals.css";
 import { OfflineIndicator, OfflineUploadOnReconnect } from "@/components/offline/OfflineUI";
@@ -7,8 +12,32 @@ import { ServiceWorkerRegister } from "@/components/offline/ServiceWorkerRegiste
 
 const newsreader = Newsreader({
   subsets: ["latin"],
-  weight: ["400", "600"],
+  weight: ["400", "600", "700"],
+  style: ["normal", "italic"],
   variable: "--font-newsreader",
+  display: "swap",
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
+  display: "swap",
+});
+
+const cinzel = Cinzel({
+  subsets: ["latin"],
+  weight: ["600", "700", "900"],
+  variable: "--font-cinzel",
+  display: "swap",
+});
+
+const spaceMono = Space_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-space-mono",
   display: "swap",
 });
 
@@ -31,7 +60,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2c2419",
+  themeColor: "#1F1915",
 };
 
 export default function RootLayout({
@@ -40,7 +69,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={newsreader.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${newsreader.variable} ${cormorant.variable} ${cinzel.variable} ${spaceMono.variable}`}
+      suppressHydrationWarning
+    >
       <body suppressHydrationWarning>
         <OfflineIndicator />
         <OfflineUploadOnReconnect />

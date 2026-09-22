@@ -1,33 +1,24 @@
 "use client";
 
-/**
- * Isolated scene preview — approve the pawns before landing copy/layout.
- * Marketing route only; Three stays out of the app bundle.
- */
-
 import dynamic from "next/dynamic";
 
-const PaperPawnsScene = dynamic(
+const PaperRoyalsScene = dynamic(
   () =>
-    import("@/components/marketing/PaperPawnsScene").then(
-      (m) => m.PaperPawnsScene,
+    import("@/components/marketing/PaperRoyalsScene").then(
+      (m) => m.PaperRoyalsScene,
     ),
   { ssr: false },
 );
 
 export default function ScenePreviewPage() {
   return (
-    <main
-      className="relative h-dvh w-full overflow-hidden"
-      style={{ background: "var(--paper-page)" }}
-    >
-      <p
-        className="pointer-events-none absolute left-4 top-4 z-10 text-xs uppercase tracking-[0.18em]"
-        style={{ color: "var(--ink-muted)", fontWeight: 600 }}
-      >
-        Scene preview · two pawns
+    <main className="landing-paper relative min-h-dvh">
+      <div className="absolute inset-0">
+        <PaperRoyalsScene className="h-full w-full" />
+      </div>
+      <p className="absolute bottom-6 left-0 right-0 text-center font-mono-plate text-[10px] uppercase tracking-[0.25em] text-[#1F1915]/70">
+        Scene preview · King &amp; Queen
       </p>
-      <PaperPawnsScene className="h-full w-full" />
     </main>
   );
 }

@@ -22,6 +22,9 @@ const config: Config = {
       },
       fontFamily: {
         print: ["var(--font-print)"],
+        "serif-title": ["var(--font-serif-title)"],
+        cinzel: ["var(--font-display)"],
+        "mono-plate": ["var(--font-mono-plate)"],
       },
       boxShadow: {
         warm: "0 10px 22px var(--shadow-warm)",

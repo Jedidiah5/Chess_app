@@ -2,19 +2,19 @@
  * Paper / ink design tokens — classic print aesthetic.
  */
 :root {
-  /* Page / board surroundings */
-  --paper-page: #e6dcc8;
-  --paper-page-deep: #d8cdb6;
-  --paper-card: #f2ebe0;
+  /* Page / board surroundings — archival paper */
+  --paper-page: #eae3d2;
+  --paper-page-deep: #ddd4c0;
+  --paper-card: #f4eedb;
 
   /* Squares — warm off-white vs muted ink wash (not B/W) */
   --paper-light: #f2e8d5;
   --paper-dark: #a89880;
 
   /* Ink */
-  --ink: #2c2419;
+  --ink: #1f1915;
   --ink-muted: #5c5346;
-  --ink-faint: rgba(44, 36, 25, 0.18);
+  --ink-faint: rgba(31, 25, 21, 0.18);
 
   /* Piece fills */
   --piece-white-fill: #f7f0e2;
@@ -27,9 +27,12 @@
   --shadow-warm-soft: rgba(92, 58, 28, 0.14);
   --shadow-warm-tight: rgba(70, 42, 18, 0.35);
 
-  /* Type — letterpress-ish, two weights (Newsreader via next/font) */
-  --font-print: var(--font-newsreader), "Iowan Old Style", "Palatino Linotype",
-    Palatino, "Book Antiqua", Georgia, serif;
+  /* Type — editorial print stack (next/font variables) */
+  --font-print: var(--font-newsreader), var(--font-cormorant), Georgia, serif;
+  --font-serif-title: var(--font-newsreader), var(--font-cormorant), Georgia,
+    serif;
+  --font-display: var(--font-cinzel), "Times New Roman", serif;
+  --font-mono-plate: var(--font-space-mono), ui-monospace, monospace;
 }
 
 body {
