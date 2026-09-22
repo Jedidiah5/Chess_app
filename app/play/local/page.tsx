@@ -227,14 +227,14 @@ export default function LocalPlayPage() {
 
   if (!ready) {
     return (
-      <main className="paper-grain flex min-h-dvh items-center justify-center px-4">
+      <main className="landing-paper flex min-h-dvh items-center justify-center px-4">
         <p className="meta-caps">Loading</p>
       </main>
     );
   }
 
   return (
-    <main className="paper-grain min-h-dvh px-5 py-8">
+    <main className="landing-paper min-h-dvh px-5 py-8">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 lg:flex-row lg:items-start">
         <section className="flex flex-1 flex-col items-center gap-5">
           <header className="w-full max-w-[min(90vw,560px)]">

@@ -5,7 +5,7 @@
     <title>Clear service worker</title>
     <meta name="robots" content="noindex" />
   </head>
-  <body style="font-family: system-ui; max-width: 32rem; margin: 3rem auto; padding: 0 1rem">
+  <body style="font-family: system-ui; max-width: 32rem; margin: 3rem auto; padding: 0 1rem; background: #eae3d2; color: #1f1915">
     <h1>Clearing service worker…</h1>
     <p id="status">Working.</p>
     <script>
@@ -20,9 +20,9 @@
             var keys = await caches.keys();
             await Promise.all(keys.map(function (k) { return caches.delete(k); }));
           }
-          status.textContent = "Done. Redirecting to /play…";
+          status.textContent = "Done. Redirecting home…";
           setTimeout(function () {
-            location.replace("/play?swcleared=1");
+            location.replace("/?swcleared=1");
           }, 400);
         } catch (err) {
           status.textContent = "Failed: " + (err && err.message ? err.message : err);

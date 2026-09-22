@@ -2,10 +2,22 @@
 
 import { useEffect } from "react";
 
+function isLocalHost() {
+  const host = window.location.hostname;
+  return (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "[::1]" ||
+    host.endsWith(".local")
+  );
+}
+
 /**
- * Production (`next start` / deployed): register versioned SW (works on
- * localhost too, so airplane-mode can be tested before deploy).
- * `next dev`: never register; unregister any existing SW and wipe caches.
+ * Register the PWA service worker only on a real deployed host.
+ * Never on localhost — a leftover SW here caches Next HTML against the
+ * wrong `/_next` chunks and surfaces as CSP `script-src 'none'`.
+ *
+ * `next dev`: always unregister + wipe caches.
  */
 export function ServiceWorkerRegister() {
   useEffect(() => {
@@ -13,31 +25,28 @@ export function ServiceWorkerRegister() {
       return;
     }
 
-    const isDev = process.env.NODE_ENV === "development";
+    const wipeLocal = async () => {
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((reg) => reg.unregister()));
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+      if (hadController && !sessionStorage.getItem("chess-sw-reloaded")) {
+        sessionStorage.setItem("chess-sw-reloaded", "1");
+        window.location.reload();
+      }
+    };
 
-    if (isDev) {
-      void (async () => {
-        const hadController = Boolean(navigator.serviceWorker.controller);
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((reg) => reg.unregister()));
-        if ("caches" in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map((key) => caches.delete(key)));
-        }
-        // Controller was serving a poisoned page; one hard reload clears it.
-        if (hadController && !sessionStorage.getItem("chess-sw-reloaded")) {
-          sessionStorage.setItem("chess-sw-reloaded", "1");
-          window.location.reload();
-        }
-      })();
+    if (process.env.NODE_ENV === "development" || isLocalHost()) {
+      void wipeLocal();
       return;
     }
 
     void navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
       .then((reg) => {
-        // A new deploy stamps a new cache version; reload once so offline
-        // shell picks up the fresh precache without a manual reinstall.
         reg.addEventListener("updatefound", () => {
           const installing = reg.installing;
           if (!installing) return;

@@ -401,7 +401,7 @@ export default function ComputerPlayPage() {
 
   if (!setup) {
     return (
-      <main className="paper-grain min-h-dvh px-5 py-10 sm:py-14">
+      <main className="landing-paper min-h-dvh px-5 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-md">
           <header>
             <div className="flex items-center gap-4">
@@ -437,7 +437,7 @@ export default function ComputerPlayPage() {
   const turnLabel = displayColor(engine.turn);
 
   return (
-    <main className="paper-grain min-h-dvh px-5 py-8">
+    <main className="landing-paper min-h-dvh px-5 py-8">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 lg:flex-row lg:items-start">
         <section className="flex flex-1 flex-col items-center gap-5">
           <header className="w-full max-w-[min(90vw,560px)]">
