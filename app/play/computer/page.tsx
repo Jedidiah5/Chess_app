@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Board, findKingSquare } from "@/components/board/Board";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
@@ -34,6 +35,11 @@ import {
   type OfflineMove,
 } from "@/lib/offline/db";
 import { uploadOfflineGame } from "@/lib/offline/upload";
+import {
+  GameSettingsSheet,
+  SettingsGearButton,
+} from "@/components/settings/GameSettingsSheet";
+import { useAppSettings } from "@/components/settings/useAppSettings";
 
 type PendingPromotion = {
   from: Square;
@@ -46,6 +52,9 @@ type SetupState = {
 };
 
 export default function ComputerPlayPage() {
+  const router = useRouter();
+  const { settings } = useAppSettings();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [setup, setSetup] = useState<SetupState | null>(null);
   const [restoring, setRestoring] = useState(true);
   const [engine, setEngine] = useState(() => createEngine());
@@ -272,10 +281,11 @@ export default function ComputerPlayPage() {
   }, [setup, restoring, engine.fen, engine.turn, engine.terminal.over, busy]);
 
   const legalTargets = useMemo(() => {
-    if (!selectedSquare || busy || thinking || !setup) return [];
+    if (!settings.showLegalMoves || !selectedSquare || busy || thinking || !setup)
+      return [];
     if (engine.turn !== setup.playerColor) return [];
     return engine.legalMoves(selectedSquare);
-  }, [busy, engine, selectedSquare, setup, thinking]);
+  }, [busy, engine, selectedSquare, setup, thinking, settings.showLegalMoves]);
 
   const inCheckSquare = useMemo(() => {
     if (!engine.inCheck) return null;
@@ -352,6 +362,14 @@ export default function ComputerPlayPage() {
     snapTo(createEngine().board, null);
     void clearActiveOfflineGame();
   }, [snapTo]);
+
+  const handleQuit = useCallback(() => {
+    thinkGen.current += 1;
+    stockfishRef.current?.dispose();
+    stockfishRef.current = null;
+    void clearActiveOfflineGame();
+    router.push("/play");
+  }, [router]);
 
   const startGame = useCallback(
     (level: StockfishLevel, playerColor: Color) => {
@@ -448,10 +466,13 @@ export default function ComputerPlayPage() {
               >
                 Vs computer
               </h1>
-              <span className="meta-caps">
-                {STOCKFISH_LEVELS.find((l) => l.id === setup.level)?.label} ·{" "}
-                {setup.playerColor === "w" ? "White" : "Black"}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="meta-caps">
+                  {STOCKFISH_LEVELS.find((l) => l.id === setup.level)?.label} ·{" "}
+                  {setup.playerColor === "w" ? "White" : "Black"}
+                </span>
+                <SettingsGearButton onClick={() => setSettingsOpen(true)} />
+              </div>
             </div>
 
             <div className="status-strip mt-3">
@@ -481,21 +502,26 @@ export default function ComputerPlayPage() {
             <PaperButton variant="primary" onClick={handleNewGame}>
               New game
             </PaperButton>
-            <PaperButton href="/play" variant="ghost">
-              Menu
-            </PaperButton>
           </div>
         </section>
 
-        <aside className="w-full lg:w-64">
-          <PaperCard>
-            <h2 className="meta-caps">Score sheet</h2>
-            <div className="mt-3">
-              <MoveList history={moves.map((m) => m.san)} />
-            </div>
-          </PaperCard>
-        </aside>
+        {settings.showScoreSheet ? (
+          <aside className="w-full lg:w-64">
+            <PaperCard>
+              <h2 className="meta-caps">Score sheet</h2>
+              <div className="mt-3">
+                <MoveList history={moves.map((m) => m.san)} />
+              </div>
+            </PaperCard>
+          </aside>
+        ) : null}
       </div>
+
+      <GameSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onQuit={handleQuit}
+      />
 
       {pendingPromotion && (
         <PromotionPicker

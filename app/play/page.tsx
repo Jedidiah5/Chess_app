@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useOnlineStatus } from "@/components/offline/OfflineUI";
+import { SettingsGearLink } from "@/components/settings/SettingsGear";
 
 export default function PlayPage() {
   const online = useOnlineStatus();
@@ -14,6 +15,8 @@ export default function PlayPage() {
       />
 
       <div className="relative z-10 flex min-h-dvh flex-col items-center justify-center px-5 py-10">
+        <SettingsGearLink className="absolute right-5 top-5 sm:right-8 sm:top-8" />
+
         <h1 className="font-serif-title text-5xl font-semibold tracking-tight sm:text-6xl">
           Play
         </h1>

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { SettingsGearLink } from "@/components/settings/SettingsGear";
 
 const PaperRoyalsScene = dynamic(
   () =>
@@ -64,6 +65,8 @@ export function LandingHero() {
       />
 
       <div className="relative z-20 flex min-h-dvh flex-col items-center justify-center px-5 py-10">
+        <SettingsGearLink className="absolute right-5 top-5 sm:right-8 sm:top-8" />
+
         <h1 className="font-serif-title text-6xl font-semibold tracking-tight text-[#1F1915] sm:text-7xl md:text-8xl">
           Chess
         </h1>

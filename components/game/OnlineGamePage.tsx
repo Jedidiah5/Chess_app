@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { Board, findKingSquare } from "@/components/board/Board";
 import { Clock } from "@/components/board/Clock";
 import { DisconnectBanner } from "@/components/board/DisconnectBanner";
@@ -38,6 +38,11 @@ import {
 } from "@/components/game/GameOverModal";
 import { subscribeToGame, unsubscribeFromGame } from "@/lib/supabase/realtime";
 import type { GameRow, MoveRow } from "@/types/game";
+import {
+  GameSettingsSheet,
+  SettingsGearButton,
+} from "@/components/settings/GameSettingsSheet";
+import { useAppSettings } from "@/components/settings/useAppSettings";
 
 const GRACE_MS = 30_000;
 const HEARTBEAT_MS = 10_000;
@@ -70,6 +75,9 @@ function disconnectSecondsLeft(
 }
 
 export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
+  const router = useRouter();
+  const { settings } = useAppSettings();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -119,11 +127,11 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     useMoveAnimator({ orientation });
 
   const legalTargets = useMemo(() => {
-    if (!selectedSquare || busy) {
+    if (!settings.showLegalMoves || !selectedSquare || busy) {
       return [];
     }
     return engine.legalMoves(selectedSquare);
-  }, [engine, selectedSquare, busy]);
+  }, [engine, selectedSquare, busy, settings.showLegalMoves]);
 
   const inCheckSquare = useMemo(() => {
     if (!engine.inCheck) {
@@ -534,6 +542,16 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     window.setTimeout(() => setCopied(false), 2000);
   }, [inviteCode]);
 
+  const handleQuit = useCallback(() => {
+    const leave = () => router.push("/play");
+    const status = gameRef.current?.status;
+    if (status === "active") {
+      void runClaim("resign").finally(leave);
+      return;
+    }
+    leave();
+  }, [router, runClaim]);
+
   const handleOpponentFlag = useCallback(() => {
     if (!isMyTurn) {
       void runClaim("timeout");
@@ -603,7 +621,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
     game.draw_offer_by !== null && game.draw_offer_by !== userId;
 
   return (
-    <main className="paper-grain min-h-dvh px-5 py-8">
+    <main className="landing-paper min-h-dvh px-5 py-8">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 lg:flex-row lg:items-start">
         <section className="flex flex-1 flex-col items-center gap-5">
           <header className="w-full max-w-[min(90vw,560px)]">
@@ -614,7 +632,10 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
               >
                 Online game
               </h1>
-              <span className="meta-caps">Rated</span>
+              <div className="flex items-center gap-3">
+                <span className="meta-caps">Rated</span>
+                <SettingsGearButton onClick={() => setSettingsOpen(true)} />
+              </div>
             </div>
 
             <div className="status-strip mt-3">
@@ -741,15 +762,24 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
           </Link>
         </section>
 
-        <aside className="w-full lg:w-64">
-          <PaperCard>
-            <h2 className="meta-caps">Score sheet</h2>
-            <div className="mt-3">
-              <MoveList history={sanHistory} />
-            </div>
-          </PaperCard>
-        </aside>
+        {settings.showScoreSheet ? (
+          <aside className="w-full lg:w-64">
+            <PaperCard>
+              <h2 className="meta-caps">Score sheet</h2>
+              <div className="mt-3">
+                <MoveList history={sanHistory} />
+              </div>
+            </PaperCard>
+          </aside>
+        ) : null}
       </div>
+
+      <GameSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onQuit={handleQuit}
+        quitLabel={game.status === "active" ? "Resign & quit" : "Quit game"}
+      />
 
       {pendingPromotion && (
         <PromotionPicker

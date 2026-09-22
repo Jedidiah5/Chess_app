@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Board, findKingSquare } from "@/components/board/Board";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
@@ -26,6 +27,11 @@ import {
 import { uploadOfflineGame } from "@/lib/offline/upload";
 import { PaperButton } from "@/components/ui/PaperButton";
 import { PaperCard } from "@/components/ui/PaperCard";
+import {
+  GameSettingsSheet,
+  SettingsGearButton,
+} from "@/components/settings/GameSettingsSheet";
+import { useAppSettings } from "@/components/settings/useAppSettings";
 
 type PendingPromotion = {
   from: Square;
@@ -33,6 +39,9 @@ type PendingPromotion = {
 };
 
 export default function LocalPlayPage() {
+  const router = useRouter();
+  const { settings } = useAppSettings();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [engine, setEngine] = useState(() => createEngine());
   const [orientation, setOrientation] = useState<BoardOrientation>("white");
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
@@ -95,11 +104,16 @@ export default function LocalPlayPage() {
   );
 
   const legalTargets = useMemo(() => {
-    if (!selectedSquare || busy) {
+    if (!settings.showLegalMoves || !selectedSquare || busy) {
       return [];
     }
     return engine.legalMoves(selectedSquare);
-  }, [engine, selectedSquare, busy]);
+  }, [engine, selectedSquare, busy, settings.showLegalMoves]);
+
+  useEffect(() => {
+    if (!settings.autoFlipBoard) return;
+    setOrientation(engine.turn === "w" ? "white" : "black");
+  }, [engine.turn, settings.autoFlipBoard]);
 
   const inCheckSquare = useMemo(() => {
     if (!engine.inCheck) {
@@ -214,6 +228,11 @@ export default function LocalPlayPage() {
     void clearActiveOfflineGame();
   }, [snapTo]);
 
+  const handleQuit = useCallback(() => {
+    void clearActiveOfflineGame();
+    router.push("/play");
+  }, [router]);
+
   const toggleOrientation = useCallback(() => {
     setOrientation((current) => (current === "white" ? "black" : "white"));
   }, []);
@@ -245,7 +264,10 @@ export default function LocalPlayPage() {
               >
                 Pass &amp; play
               </h1>
-              <span className="meta-caps">One device · Unrated</span>
+              <div className="flex items-center gap-3">
+                <span className="meta-caps">One device · Unrated</span>
+                <SettingsGearButton onClick={() => setSettingsOpen(true)} />
+              </div>
             </div>
 
             <div className="status-strip mt-3">
@@ -273,28 +295,31 @@ export default function LocalPlayPage() {
             <PaperButton variant="primary" onClick={handleNewGame}>
               New game
             </PaperButton>
-            <PaperButton variant="ghost" onClick={toggleOrientation}>
-              Flip board
-            </PaperButton>
-            <PaperButton href="/play" variant="ghost">
-              Menu
-            </PaperButton>
+            {!settings.autoFlipBoard ? (
+              <PaperButton variant="ghost" onClick={toggleOrientation}>
+                Flip board
+              </PaperButton>
+            ) : null}
           </div>
         </section>
 
-        <aside className="w-full lg:w-64">
-          <PaperCard>
-            <h2 className="meta-caps">Score sheet</h2>
-            <div className="mt-3">
-              {/*
-                `moves` is the accumulated record. The engine is rebuilt from
-                FEN on every commit, so engine.history only holds the last move.
-              */}
-              <MoveList history={moves.map((m) => m.san)} />
-            </div>
-          </PaperCard>
-        </aside>
+        {settings.showScoreSheet ? (
+          <aside className="w-full lg:w-64">
+            <PaperCard>
+              <h2 className="meta-caps">Score sheet</h2>
+              <div className="mt-3">
+                <MoveList history={moves.map((m) => m.san)} />
+              </div>
+            </PaperCard>
+          </aside>
+        ) : null}
       </div>
+
+      <GameSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onQuit={handleQuit}
+      />
 
       {pendingPromotion && (
         <PromotionPicker
