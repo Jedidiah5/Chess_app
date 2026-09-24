@@ -4,14 +4,12 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 
 const ERROR_COPY: Record<string, string> = {
-  otp_expired: "That sign-in link has expired or was already used. Request a new one.",
-  access_denied: "That sign-in link has expired or was already used. Request a new one.",
-  bad_code_verifier:
-    "Open the link in the same browser you requested it from, or request a new one.",
-  flow_state_not_found:
-    "Open the link in the same browser you requested it from, or request a new one.",
-  missing_code: "The sign-in link was incomplete. Request a new one.",
-  no_session: "Sign-in didn't stick. Request a new link and try again.",
+  otp_expired: "That email link has expired or was already used. Log in below.",
+  access_denied: "That email link has expired or was already used. Log in below.",
+  bad_code_verifier: "Email confirmed. Log in below with your password.",
+  flow_state_not_found: "Email confirmed. Log in below with your password.",
+  missing_code: "That email link was incomplete. Log in below.",
+  no_session: "Sign-in didn't stick. Log in below.",
 };
 
 export default async function LoginPage({
@@ -22,7 +20,7 @@ export default async function LoginPage({
   const configured = hasSupabaseEnv();
   const { error } = await searchParams;
   const errorMessage = error
-    ? (ERROR_COPY[error] ?? "Sign-in failed. Request a new link and try again.")
+    ? (ERROR_COPY[error] ?? "Sign-in failed. Try logging in below.")
     : null;
 
   return (
@@ -31,7 +29,7 @@ export default async function LoginPage({
         Log in
       </h1>
       <p className="mt-2 text-center font-mono-plate text-[9px] uppercase tracking-[0.18em] text-[#1F1915]/65">
-        Magic link · no password
+        Email &amp; password
       </p>
 
       {errorMessage && (
