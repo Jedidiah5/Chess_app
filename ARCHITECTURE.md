@@ -26,7 +26,7 @@ These four rules explain almost every decision below. When in doubt, come back h
 | Styling | Tailwind CSS | — |
 | Rules engine | `chess.js` | Runs identically in browser and Deno |
 | Board UI | Custom CSS grid + SVG pieces | Full control over the lift/shadow choreography — see §19 |
-| Landing page 3D | Three.js via React Three Fiber + drei | Marketing surface only, route-scoped, never in the app bundle |
+| Landing + profile 3D | Three.js via React Three Fiber + drei | Landing and profile pages only, lazy-loaded per route, never in the game bundle |
 | AI opponent | Stockfish WASM (Web Worker) | Runs fully on-device: zero server cost, works offline |
 | Database | Supabase Postgres | Leaderboard, Elo and head-to-head are relational aggregate queries |
 | Auth | Supabase Auth | Row-level security keys off `auth.uid()` |
