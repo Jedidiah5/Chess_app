@@ -61,11 +61,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  const { supabase, supabaseResponse } = createClient(request);
+  const client = createClient(request);
+  const supabase = client.supabase;
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  // After getUser, which may have refreshed the session cookies.
+  const supabaseResponse = client.supabaseResponse;
 
   let profile = null;
   if (user) {
