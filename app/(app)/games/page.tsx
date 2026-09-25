@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { SettingsGearLink } from "@/components/settings/SettingsGear";
 import { createClient } from "@/lib/supabase/server";
 import { fetchPlayerGames } from "@/lib/supabase/stats";
 
@@ -7,7 +8,9 @@ type GamesPageProps = {
   searchParams: Promise<{ unrated?: string }>;
 };
 
-export default async function GamesArchivePage({ searchParams }: GamesPageProps) {
+export default async function GamesArchivePage({
+  searchParams,
+}: GamesPageProps) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -22,30 +25,54 @@ export default async function GamesArchivePage({ searchParams }: GamesPageProps)
   const games = await fetchPlayerGames(supabase, user.id, { includeUnrated });
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-12">
-      <div className="mx-auto max-w-2xl">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-stone-900">Game archive</h1>
-            <p className="mt-1 text-sm text-stone-600">Your finished games</p>
-          </div>
-          <div className="flex gap-3 text-sm">
+    <main className="landing-paper relative min-h-dvh overflow-hidden text-[#1F1915] antialiased">
+      <div
+        className="landing-archival-grain pointer-events-none absolute inset-0 opacity-20"
+        aria-hidden
+      />
+
+      <div className="relative z-10 mx-auto w-full max-w-2xl px-5 py-6 sm:px-8 sm:py-8">
+        <header className="landing-double-rule-bottom flex items-center justify-between gap-4 pb-4">
+          <Link
+            href="/"
+            className="font-serif-title text-3xl font-semibold tracking-tight"
+          >
+            Chess
+          </Link>
+          <div className="flex items-center gap-4">
             <Link
-              href={includeUnrated ? "/games" : "/games?unrated=1"}
-              className="text-stone-700 underline-offset-2 hover:underline"
+              href="/play"
+              className="font-mono-plate text-[9px] font-bold uppercase tracking-[0.18em] text-[#1F1915]/65 hover:text-[#1F1915]"
             >
-              {includeUnrated ? "Hide unrated" : "Show unrated"}
-            </Link>
-            <Link href="/play" className="text-stone-700 underline-offset-2 hover:underline">
               Play
             </Link>
+            <SettingsGearLink />
           </div>
         </header>
 
-        <ul className="space-y-2">
+        <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-serif-title text-4xl font-semibold tracking-tight sm:text-5xl">
+              Game archive
+            </h1>
+            <p className="mt-2 font-mono-plate text-[10px] uppercase tracking-[0.18em] text-[#1F1915]/60">
+              Your finished games
+            </p>
+          </div>
+          <Link
+            href={includeUnrated ? "/games" : "/games?unrated=1"}
+            className="font-mono-plate text-[9px] font-bold uppercase tracking-[0.18em] text-[#1F1915]/65 hover:text-[#1F1915]"
+          >
+            {includeUnrated ? "Hide unrated" : "Show unrated"}
+          </Link>
+        </div>
+
+        <ul className="mt-6 space-y-2">
           {games.length === 0 ? (
-            <li className="rounded-lg border border-stone-200 bg-white p-6 text-center text-sm text-stone-500">
-              No games yet.
+            <li className="landing-plate-card py-8 text-center">
+              <p className="font-mono-plate text-[10px] uppercase tracking-[0.18em] text-[#1F1915]/50">
+                No games yet.
+              </p>
             </li>
           ) : (
             games.map((game) => {
@@ -55,6 +82,7 @@ export default async function GamesArchivePage({ searchParams }: GamesPageProps)
                 : game.white?.username ?? "—";
 
               let outcome = "—";
+              let outcomeClass = "text-[#1F1915]/60";
               if (game.status === "abandoned") {
                 outcome = "Abandoned";
               } else if (game.result === "draw") {
@@ -64,6 +92,7 @@ export default async function GamesArchivePage({ searchParams }: GamesPageProps)
                 (game.result === "black" && !iAmWhite)
               ) {
                 outcome = "Win";
+                outcomeClass = "text-[#1F1915]";
               } else if (game.result) {
                 outcome = "Loss";
               }
@@ -76,33 +105,42 @@ export default async function GamesArchivePage({ searchParams }: GamesPageProps)
                 : game.black_rating_delta;
 
               let ratingText = "";
+              let deltaClass = "text-[#1F1915]/60";
               if (game.rated && before !== null && delta !== null) {
                 const after = before + delta;
                 const sign = delta > 0 ? `+${delta}` : `${delta}`;
                 ratingText = `${before} → ${after} (${sign})`;
+                if (delta > 0) deltaClass = "text-[#2d5a3d]";
+                else if (delta < 0) deltaClass = "text-[#8c2f22]";
               }
 
               return (
                 <li key={game.id}>
                   <Link
                     href={`/games/${game.id}`}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm hover:border-stone-300"
+                    className="flex flex-wrap items-center justify-between gap-2 border border-[#1F1915]/20 bg-[#F4EEDB]/60 px-4 py-3 transition hover:border-[#1F1915]/40 hover:bg-[#F4EEDB]/80"
                   >
                     <div>
-                      <p className="font-medium text-stone-900">
-                        vs {opponent}{" "}
+                      <p className="font-semibold text-[#1F1915]">
+                        vs {opponent}
                         {!game.rated && (
-                          <span className="ml-1 rounded bg-stone-100 px-1.5 py-0.5 text-xs font-normal text-stone-500">
+                          <span className="ml-2 font-mono-plate text-[8px] font-normal uppercase tracking-[0.16em] text-[#1F1915]/50">
                             unrated
                           </span>
                         )}
                       </p>
-                      <p className="mt-0.5 text-stone-500">
+                      <p
+                        className={`mt-0.5 font-mono-plate text-[10px] uppercase tracking-[0.14em] ${outcomeClass}`}
+                      >
                         {outcome}
-                        {game.reason ? ` · ${game.reason.replaceAll("_", " ")}` : ""}
+                        {game.reason
+                          ? ` · ${game.reason.replaceAll("_", " ")}`
+                          : ""}
                       </p>
                     </div>
-                    <div className="text-right font-mono text-stone-700">
+                    <div
+                      className={`text-right font-mono-plate text-[11px] ${deltaClass}`}
+                    >
                       {ratingText || (game.rated ? "—" : "")}
                     </div>
                   </Link>
@@ -111,6 +149,15 @@ export default async function GamesArchivePage({ searchParams }: GamesPageProps)
             })
           )}
         </ul>
+
+        <footer className="mt-10 text-center">
+          <Link
+            href="/play"
+            className="font-mono-plate text-[10px] font-bold uppercase tracking-[0.18em] text-[#1F1915]/65 hover:text-[#1F1915]"
+          >
+            Back to play
+          </Link>
+        </footer>
       </div>
     </main>
   );
