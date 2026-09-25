@@ -26,7 +26,11 @@ function Poster() {
   );
 }
 
-export function LandingHero() {
+export function LandingHero({
+  dashboardHref = null,
+}: {
+  dashboardHref?: string | null;
+}) {
   const [allowScene, setAllowScene] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
@@ -74,10 +78,10 @@ export function LandingHero() {
         <div className="landing-plate-card mt-8 w-full max-w-sm">
           <div className="flex flex-col gap-3">
             <Link
-              href="/login"
+              href={dashboardHref ?? "/login"}
               className="flex w-full items-center justify-center border border-[#1F1915] bg-[#1F1915] px-5 py-3.5 font-mono-plate text-[11px] font-bold uppercase tracking-[0.2em] text-[#E7DFD2] transition hover:bg-[#2D241E] active:scale-[0.99]"
             >
-              Log in
+              {dashboardHref ? "Dashboard" : "Log in"}
             </Link>
             <Link
               href="/play/computer"
