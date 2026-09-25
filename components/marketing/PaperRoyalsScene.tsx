@@ -124,10 +124,7 @@ function Queen({
           >
             <coneGeometry args={[0.14, 0.55, 8]} />
           </mesh>
-          <mesh
-            position={[p.cx * 1.04, 7.1, p.cz * 1.04]}
-            material={ebony}
-          >
+          <mesh position={[p.cx * 1.04, 7.1, p.cz * 1.04]} material={ebony}>
             <sphereGeometry args={[0.09, 12, 12]} />
           </mesh>
         </group>
@@ -237,7 +234,8 @@ function OrbitingRoyals({ frozen }: { frozen: boolean }) {
           pointer.current.ty = y;
         }}
       />
-      <group ref={scenePivot} position={[0.1, -0.6, 0]}>
+      {/* Offset to the right third so pawns don't overlap centered text */}
+      <group ref={scenePivot} position={[4.5, -0.6, 0]}>
         <group ref={kingRef} scale={0.613}>
           <King material={ebony} />
         </group>
@@ -253,22 +251,52 @@ function ResponsiveCamera() {
   const { camera, size } = useThree();
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
-    const narrow = size.width < 640;
-    cam.fov = narrow ? 46 : 40;
-    cam.position.set(0, narrow ? 0.6 : 1.0, narrow ? 11.5 : 14.5);
+    const aspect = size.width / size.height;
+    const baseZ = 14.5;
+    const z = baseZ * Math.max(1, 1.6 / aspect);
+    cam.fov = 40;
+    cam.position.set(2.5, 1.0, z);
+    cam.lookAt(2.5, 0, 0);
     cam.updateProjectionMatrix();
   }, [camera, size.width, size.height]);
   return null;
 }
 
-function SceneContent({ frozen }: { frozen: boolean }) {
+function ReadySignal({ onReady }: { onReady?: () => void }) {
+  const fired = useRef(false);
+  const frames = useRef(0);
+
+  useFrame(() => {
+    if (fired.current || !onReady) return;
+    frames.current += 1;
+    if (frames.current >= 3) {
+      fired.current = true;
+      onReady();
+    }
+  });
+
+  return null;
+}
+
+function SceneContent({
+  frozen,
+  onReady,
+}: {
+  frozen: boolean;
+  onReady?: () => void;
+}) {
   return (
     <>
       <ResponsiveCamera />
       <ambientLight intensity={1.4} color="#f5eedc" />
       <directionalLight position={[5, 12, 8]} intensity={1.8} color="#fffdf7" />
-      <directionalLight position={[-6, 8, -5]} intensity={1.1} color="#e2d7c5" />
+      <directionalLight
+        position={[-6, 8, -5]}
+        intensity={1.1}
+        color="#e2d7c5"
+      />
       <OrbitingRoyals frozen={frozen} />
+      <ReadySignal onReady={onReady} />
     </>
   );
 }
@@ -277,22 +305,16 @@ export type PaperRoyalsSceneProps = {
   className?: string;
   freeze?: boolean;
   onReady?: () => void;
+  onContextLost?: () => void;
+  onContextRestored?: () => void;
 };
-
-function ReadyNotifier({ onReady }: { onReady?: () => void }) {
-  const { gl } = useThree();
-  useEffect(() => {
-    if (gl && onReady) {
-      requestAnimationFrame(() => onReady());
-    }
-  }, [gl, onReady]);
-  return null;
-}
 
 export function PaperRoyalsScene({
   className,
   freeze,
   onReady,
+  onContextLost,
+  onContextRestored,
 }: PaperRoyalsSceneProps) {
   const [reducedMotion, setReducedMotion] = useState(false);
 
@@ -313,13 +335,22 @@ export function PaperRoyalsScene({
         gl={{
           antialias: true,
           alpha: true,
-          powerPreference: "high-performance",
+          powerPreference: "default",
         }}
-        camera={{ position: [0, 1.0, 14.5], fov: 40, near: 0.1, far: 100 }}
+        camera={{ position: [2.5, 1.0, 14.5], fov: 40, near: 0.1, far: 100 }}
         style={{ width: "100%", height: "100%", display: "block" }}
+        onCreated={({ gl }) => {
+          const canvas = gl.domElement;
+          canvas.addEventListener("webglcontextlost", (e) => {
+            e.preventDefault();
+            onContextLost?.();
+          });
+          canvas.addEventListener("webglcontextrestored", () => {
+            onContextRestored?.();
+          });
+        }}
       >
-        <ReadyNotifier onReady={onReady} />
-        <SceneContent frozen={frozen} />
+        <SceneContent frozen={frozen} onReady={onReady} />
       </Canvas>
     </div>
   );
