@@ -13,7 +13,6 @@ const BUILD_STATIC = [
   "/_next/static/chunks/4bd1b696-c023c6e3521b1417.js",
   "/_next/static/chunks/619-ba102abea3e3d0e4.js",
   "/_next/static/chunks/646.f342b7cffc01feb0.js",
-  "/_next/static/chunks/72c373f8.e1f236f5dc71adab.js",
   "/_next/static/chunks/77-77feb9b64a8b61c5.js",
   "/_next/static/chunks/810.dd1e566eb65b4445.js",
   "/_next/static/chunks/945-1fc1657d0b2e590b.js",
@@ -40,8 +39,6 @@ const BUILD_STATIC = [
   "/_next/static/chunks/app/play/local/page-d246fdad36b2ebf0.js",
   "/_next/static/chunks/app/play/online/page-a9faf4f047095410.js",
   "/_next/static/chunks/app/play/page-0ba792e1a706ea67.js",
-  "/_next/static/chunks/b536a0f1.ddfe2ad38bd36eeb.js",
-  "/_next/static/chunks/bd904a5c.589bde7b692e844b.js",
   "/_next/static/chunks/framework-085cf39580498177.js",
   "/_next/static/chunks/main-6da0cd059aa3577d.js",
   "/_next/static/chunks/main-app-772c78dc257f08df.js",
@@ -67,7 +64,6 @@ function isSupabaseRequest(url) {
 /** Routes that work fully offline (HTML shell + client logic). */
 function isOfflineShellPath(pathname) {
   return (
-    pathname === "/play" ||
     pathname === "/play/local" ||
     pathname === "/play/computer" ||
     pathname === "/offline"
@@ -75,18 +71,21 @@ function isOfflineShellPath(pathname) {
 }
 
 function isOnlineOnlyNavigation(pathname) {
+  if (pathname === "/") return true;
+  if (pathname === "/play") return true;
   if (pathname.startsWith("/play/online")) return true;
   if (
     pathname.startsWith("/play/") &&
     !pathname.startsWith("/play/local") &&
     !pathname.startsWith("/play/computer")
   ) {
-    if (pathname !== "/play") return true;
+    return true;
   }
   if (pathname.startsWith("/leaderboard")) return true;
   if (pathname.startsWith("/games")) return true;
   if (pathname.startsWith("/join/")) return true;
   if (pathname.startsWith("/profile")) return true;
+  if (pathname.startsWith("/settings")) return true;
   if (pathname.startsWith("/login") || pathname.startsWith("/username")) {
     return true;
   }
@@ -107,7 +106,6 @@ function isImmutableStatic(pathname) {
 }
 
 const PRECACHE = [
-  "/play",
   "/play/local",
   "/play/computer",
   "/offline",
@@ -279,15 +277,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Catch-all: network-first for non-asset requests, no caching of HTML.
+  // Only cache static resources (images, fonts, etc.) that aren't covered above.
   event.respondWith(
     (async () => {
       const cache = await cachePromise;
       try {
         const response = await fetch(request);
+        // Only cache non-navigation static resources (e.g. images, fonts).
+        // Never cache HTML navigations in the catch-all — they may contain session data.
+        const isNavigation = request.mode === "navigate";
+        const isStaticAsset =
+          pathname.endsWith(".svg") ||
+          pathname.endsWith(".png") ||
+          pathname.endsWith(".jpg") ||
+          pathname.endsWith(".woff2") ||
+          pathname.endsWith(".woff");
         if (
           response.ok &&
           response.type === "basic" &&
-          !pathname.startsWith("/api/")
+          !isNavigation &&
+          isStaticAsset
         ) {
           void cache.put(pathname, response.clone());
         }

@@ -12,33 +12,37 @@ import { ServiceWorkerRegister } from "@/components/offline/ServiceWorkerRegiste
 
 const newsreader = Newsreader({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  style: ["normal", "italic"],
+  weight: ["400", "600"],
+  style: ["normal"],
   variable: "--font-newsreader",
   display: "swap",
+  preload: true,
 });
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  style: ["normal", "italic"],
+  weight: ["600"],
+  style: ["normal"],
   variable: "--font-cormorant",
   display: "swap",
+  preload: true,
 });
 
 const cinzel = Cinzel({
   subsets: ["latin"],
-  weight: ["600", "700", "900"],
+  weight: ["600"],
   variable: "--font-cinzel",
   display: "swap",
+  preload: false,
 });
 
 const spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
-  style: ["normal", "italic"],
+  style: ["normal"],
   variable: "--font-space-mono",
   display: "swap",
+  preload: true,
 });
 
 export const metadata: Metadata = {

@@ -8,3 +8,12 @@ export const TIME_CONTROLS: Record<
   rapid: { label: "Rapid (10+0)", initialMs: 10 * 60 * 1000, incrementMs: 0 },
   untimed: { label: "Untimed", initialMs: 0, incrementMs: 0 },
 };
+
+export function getTimeControlLabel(initialMs: number): string {
+  for (const [, config] of Object.entries(TIME_CONTROLS)) {
+    if (config.initialMs === initialMs) {
+      return config.label;
+    }
+  }
+  return initialMs > 0 ? `${Math.round(initialMs / 60000)}+0` : "Untimed";
+}
