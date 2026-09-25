@@ -32,6 +32,7 @@ export function LandingHero({
   dashboardHref?: string | null;
 }) {
   const [allowScene, setAllowScene] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -47,16 +48,30 @@ export function LandingHero({
 
   return (
     <main className="landing-paper relative min-h-dvh overflow-hidden text-[#1F1915] antialiased selection:bg-[#1F1915] selection:text-[#EAE3D2]">
-      {/* Full-bleed 3D behind the card */}
-      <div className="absolute inset-0 z-[5]" aria-hidden={!allowScene}>
-        {allowScene ? (
-          <PaperRoyalsScene
-            className="h-full w-full cursor-grab active:cursor-grabbing"
-            freeze={reducedMotion}
-          />
-        ) : (
+      {/* Full-bleed visual behind the card */}
+      <div className="absolute inset-0 z-[5]" aria-hidden="true">
+        {/* Poster as LCP fallback - always rendered, fades out when 3D is ready */}
+        <div
+          className="absolute inset-0 transition-opacity duration-500"
+          style={{ opacity: sceneReady ? 0 : 1 }}
+        >
           <Poster />
+        </div>
+
+        {/* 3D scene layered on top when allowed and supported */}
+        {allowScene && (
+          <div
+            className="absolute inset-0 transition-opacity duration-500"
+            style={{ opacity: sceneReady ? 1 : 0 }}
+          >
+            <PaperRoyalsScene
+              className="h-full w-full cursor-grab active:cursor-grabbing"
+              freeze={reducedMotion}
+              onReady={() => setSceneReady(true)}
+            />
+          </div>
         )}
+
         <div
           className="landing-archival-grain pointer-events-none absolute inset-0 opacity-25"
           aria-hidden
@@ -74,6 +89,11 @@ export function LandingHero({
         <h1 className="font-serif-title text-6xl font-semibold tracking-tight text-[#1F1915] sm:text-7xl md:text-8xl">
           Chess
         </h1>
+
+        <p className="mt-4 max-w-xs text-center font-serif text-lg leading-relaxed text-[#1F1915]/75 sm:text-xl">
+          Classic strategy, timeless design. Play online, against the computer,
+          or pass & play on one device.
+        </p>
 
         <div className="landing-plate-card mt-8 w-full max-w-sm">
           <div className="flex flex-col gap-3">
@@ -97,6 +117,27 @@ export function LandingHero({
             </Link>
           </div>
         </div>
+
+        {/* What it does section */}
+        <section className="mt-12 max-w-md text-center">
+          <h2 className="font-mono-plate text-[9px] font-bold uppercase tracking-[0.22em] text-[#1F1915]/55">
+            What you get
+          </h2>
+          <ul className="mt-4 space-y-2 text-sm leading-relaxed text-[#1F1915]/70">
+            <li>
+              <strong className="font-semibold text-[#1F1915]">Online play</strong>{" "}
+              — challenge friends with invite links, rated games with Elo
+            </li>
+            <li>
+              <strong className="font-semibold text-[#1F1915]">Stockfish AI</strong>{" "}
+              — four difficulty levels, runs entirely in your browser
+            </li>
+            <li>
+              <strong className="font-semibold text-[#1F1915]">Works offline</strong>{" "}
+              — install as an app, play without a connection
+            </li>
+          </ul>
+        </section>
       </div>
     </main>
   );

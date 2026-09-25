@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { PencilFrame } from "@/components/ui/PencilFrame";
 
 type OptionPlateProps = {
@@ -8,7 +9,10 @@ type OptionPlateProps = {
   note?: string;
 };
 
-/** Radio dressed as a letterpress plate; the input stays for a11y and keyboard. */
+/**
+ * Radio dressed as a letterpress plate with full keyboard and screen reader support.
+ * The native radio input handles focus, keyboard navigation, and announcements.
+ */
 export function OptionPlate({
   name,
   checked,
@@ -16,8 +20,10 @@ export function OptionPlate({
   label,
   note,
 }: OptionPlateProps) {
+  const id = useId();
+
   return (
-    <label className={`paper-option ${checked ? "paper-option--on" : ""}`}>
+    <div className={`paper-option ${checked ? "paper-option--on" : ""}`}>
       <PencilFrame
         className={`pointer-events-none absolute inset-0 h-full w-full ${
           checked ? "" : "text-[var(--ink-muted)]"
@@ -27,15 +33,24 @@ export function OptionPlate({
       />
       <input
         type="radio"
+        id={id}
         name={name}
         checked={checked}
-        onChange={onSelect}
-        className="sr-only"
+        onChange={() => onSelect()}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        aria-describedby={note ? `${id}-note` : undefined}
       />
-      <span className="relative z-[1] text-sm font-semibold">{label}</span>
-      {note ? (
-        <span className="paper-option-note relative z-[1] text-xs">{note}</span>
-      ) : null}
-    </label>
+      <label
+        htmlFor={id}
+        className="pointer-events-none relative z-[1] flex w-full cursor-pointer items-baseline gap-3"
+      >
+        <span className="text-sm font-semibold">{label}</span>
+        {note ? (
+          <span id={`${id}-note`} className="paper-option-note text-xs">
+            {note}
+          </span>
+        ) : null}
+      </label>
+    </div>
   );
 }

@@ -276,9 +276,24 @@ function SceneContent({ frozen }: { frozen: boolean }) {
 export type PaperRoyalsSceneProps = {
   className?: string;
   freeze?: boolean;
+  onReady?: () => void;
 };
 
-export function PaperRoyalsScene({ className, freeze }: PaperRoyalsSceneProps) {
+function ReadyNotifier({ onReady }: { onReady?: () => void }) {
+  const { gl } = useThree();
+  useEffect(() => {
+    if (gl && onReady) {
+      requestAnimationFrame(() => onReady());
+    }
+  }, [gl, onReady]);
+  return null;
+}
+
+export function PaperRoyalsScene({
+  className,
+  freeze,
+  onReady,
+}: PaperRoyalsSceneProps) {
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -303,6 +318,7 @@ export function PaperRoyalsScene({ className, freeze }: PaperRoyalsSceneProps) {
         camera={{ position: [0, 1.0, 14.5], fov: 40, near: 0.1, far: 100 }}
         style={{ width: "100%", height: "100%", display: "block" }}
       >
+        <ReadyNotifier onReady={onReady} />
         <SceneContent frozen={frozen} />
       </Canvas>
     </div>

@@ -67,7 +67,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const summary = [
     `${profile.games_played} rated ${profile.games_played === 1 ? "game" : "games"}`,
     rate !== null ? `${rate}% win rate` : null,
-    streak.type && streak.count > 0 ? `${streak.count}${streak.type} streak` : null,
+    streak.type && streak.count > 0 ? `${streak.count}${streak.type[0]} streak` : null,
   ].filter(Boolean);
 
   return (

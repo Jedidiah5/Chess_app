@@ -21,6 +21,8 @@ type BoardProps = {
   onSquareTap: (square: Square) => void;
   /** When set, renders animated motion pieces instead of raw `pieces`. */
   motionPieces?: MotionPiece[] | null;
+  /** Last move from/to squares to highlight. */
+  lastMove?: { from: Square; to: Square } | null;
 };
 
 type DisplaySquare = {
@@ -84,6 +86,7 @@ export function Board({
   inCheckSquare,
   onSquareTap,
   motionPieces = null,
+  lastMove = null,
 }: BoardProps) {
   const uid = useId().replace(/:/g, "");
   const hatchId = `${uid}-hatch`;
@@ -131,7 +134,7 @@ export function Board({
   }, [motionPieces, pieces, orientation, selectedSquare]);
 
   return (
-    <div className="w-full max-w-[min(90vw,560px)]">
+    <div className="w-full max-w-[min(95vw,560px)] sm:max-w-[min(90vw,560px)]">
       <svg
         className="pointer-events-none absolute h-0 w-0 overflow-hidden"
         aria-hidden="true"
@@ -201,6 +204,9 @@ export function Board({
             const isSelected = selectedSquare === sq.square;
             const isLegalTarget = legalTargetSet.has(sq.square);
             const isCheck = inCheckSquare === sq.square;
+            const isLastMove =
+              lastMove &&
+              (lastMove.from === sq.square || lastMove.to === sq.square);
 
             return (
               <button
@@ -213,6 +219,7 @@ export function Board({
                   isSelected ? "square-selected" : "",
                   isLegalTarget ? "square-legal" : "",
                   isCheck ? "square-check" : "",
+                  isLastMove ? "square-last-move" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -235,8 +242,8 @@ export function Board({
                 {sq.showRank && (
                   <span
                     className={[
-                      "coord pointer-events-none absolute left-1 top-1 z-[1] text-[10px] font-medium leading-none",
-                      sq.isLight ? "text-[#5a554c]/80" : "text-[#1f1d1a]/72",
+                      "coord pointer-events-none absolute left-0.5 top-0.5 z-[1] text-[8px] font-medium leading-none sm:text-[10px]",
+                      sq.isLight ? "text-[#5a554c]/70" : "text-[#1f1d1a]/60",
                     ].join(" ")}
                   >
                     {sq.rankLabel}
@@ -245,8 +252,8 @@ export function Board({
                 {sq.showFile && (
                   <span
                     className={[
-                      "coord pointer-events-none absolute bottom-1 right-1 z-[1] text-[10px] font-medium leading-none",
-                      sq.isLight ? "text-[#5a554c]/80" : "text-[#1f1d1a]/72",
+                      "coord pointer-events-none absolute bottom-0.5 right-0.5 z-[1] text-[8px] font-medium leading-none sm:text-[10px]",
+                      sq.isLight ? "text-[#5a554c]/70" : "text-[#1f1d1a]/60",
                     ].join(" ")}
                   >
                     {sq.fileLabel}

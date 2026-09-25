@@ -22,6 +22,22 @@ const buildId =
     ? fs.readFileSync(nextBuildIdPath, "utf8").trim().slice(0, 12)
     : crypto.randomBytes(6).toString("hex"));
 
+/**
+ * Chunk hashes that contain Three.js / @react-three/fiber.
+ * These are only used on the marketing landing page (not offline-critical)
+ * and should not be precached to stay under the 4MB budget.
+ * Updated hashes can be identified by inspecting the build output.
+ */
+const THREE_CHUNK_PATTERNS = [
+  /72c373f8/,  // three + @react-three/fiber combined
+  /b536a0f1/,  // three core
+  /bd904a5c/,  // three core
+];
+
+function isThreeChunk(filename) {
+  return THREE_CHUNK_PATTERNS.some((pattern) => pattern.test(filename));
+}
+
 function walkStaticFiles(dir, base = "") {
   if (!fs.existsSync(dir)) return [];
   const out = [];
@@ -36,6 +52,8 @@ function walkStaticFiles(dir, base = "") {
     }
     if (entry.name.endsWith(".map")) continue;
     if (entry.name.includes("hot-update")) continue;
+    // Skip Three.js chunks — they're only for marketing and not needed offline
+    if (isThreeChunk(entry.name)) continue;
     out.push(`/_next/static/${rel.replace(/\\/g, "/")}`);
   }
   return out;

@@ -119,6 +119,14 @@ export async function middleware(request: NextRequest) {
     return redirectWithSession(profileUrl, supabaseResponse);
   }
 
+  // Redirect signed-in users from landing page to play menu
+  if (profile && isOnboarded(profile) && pathname === "/") {
+    const playUrl = request.nextUrl.clone();
+    playUrl.pathname = "/play";
+    playUrl.search = "";
+    return redirectWithSession(playUrl, supabaseResponse);
+  }
+
   return supabaseResponse;
 }
 

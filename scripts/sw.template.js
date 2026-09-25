@@ -16,7 +16,6 @@ function isSupabaseRequest(url) {
 /** Routes that work fully offline (HTML shell + client logic). */
 function isOfflineShellPath(pathname) {
   return (
-    pathname === "/play" ||
     pathname === "/play/local" ||
     pathname === "/play/computer" ||
     pathname === "/offline"
@@ -24,18 +23,21 @@ function isOfflineShellPath(pathname) {
 }
 
 function isOnlineOnlyNavigation(pathname) {
+  if (pathname === "/") return true;
+  if (pathname === "/play") return true;
   if (pathname.startsWith("/play/online")) return true;
   if (
     pathname.startsWith("/play/") &&
     !pathname.startsWith("/play/local") &&
     !pathname.startsWith("/play/computer")
   ) {
-    if (pathname !== "/play") return true;
+    return true;
   }
   if (pathname.startsWith("/leaderboard")) return true;
   if (pathname.startsWith("/games")) return true;
   if (pathname.startsWith("/join/")) return true;
   if (pathname.startsWith("/profile")) return true;
+  if (pathname.startsWith("/settings")) return true;
   if (pathname.startsWith("/login") || pathname.startsWith("/username")) {
     return true;
   }
@@ -56,7 +58,6 @@ function isImmutableStatic(pathname) {
 }
 
 const PRECACHE = [
-  "/play",
   "/play/local",
   "/play/computer",
   "/offline",
@@ -228,15 +229,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Catch-all: network-first for non-asset requests, no caching of HTML.
+  // Only cache static resources (images, fonts, etc.) that aren't covered above.
   event.respondWith(
     (async () => {
       const cache = await cachePromise;
       try {
         const response = await fetch(request);
+        // Only cache non-navigation static resources (e.g. images, fonts).
+        // Never cache HTML navigations in the catch-all — they may contain session data.
+        const isNavigation = request.mode === "navigate";
+        const isStaticAsset =
+          pathname.endsWith(".svg") ||
+          pathname.endsWith(".png") ||
+          pathname.endsWith(".jpg") ||
+          pathname.endsWith(".woff2") ||
+          pathname.endsWith(".woff");
         if (
           response.ok &&
           response.type === "basic" &&
-          !pathname.startsWith("/api/")
+          !isNavigation &&
+          isStaticAsset
         ) {
           void cache.put(pathname, response.clone());
         }
