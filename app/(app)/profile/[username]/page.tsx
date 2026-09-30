@@ -98,10 +98,10 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
         <div className="mt-2 grid items-center gap-2 md:mt-8 md:grid-cols-[1fr_1.1fr] md:gap-10">
           <section className="relative" aria-hidden>
-            <ProfilePawn className="h-[260px] w-full sm:h-[340px] md:h-[500px]" />
+            <ProfilePawn className="h-[150px] w-full sm:h-[300px] md:h-[500px]" />
           </section>
 
-          <section className="pb-10">
+          <section className="flex flex-col pb-10">
             <div className="flex items-center gap-4">
               {profile.avatar_url && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -121,8 +121,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               </div>
             </div>
 
-            <div className="mt-5 flex items-baseline gap-3">
-              <span className="font-cinzel text-5xl font-semibold leading-none sm:text-6xl">
+            <div className="mt-3 flex items-baseline gap-3 sm:mt-5">
+              <span className="font-cinzel text-4xl font-semibold leading-none sm:text-6xl">
                 {profile.rating}
               </span>
               <span className="font-mono-plate text-[9px] font-bold uppercase tracking-[0.22em] text-[#1F1915]/55">
@@ -130,7 +130,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               </span>
             </div>
 
-            <div className="landing-plate-card mt-6">
+            <div className="landing-plate-card order-1 mt-6 md:order-none">
               <dl className="grid grid-cols-3 divide-x divide-[#1F1915]/20">
                 <Stat label="Wins" value={profile.wins} />
                 <Stat label="Losses" value={profile.losses} />
@@ -142,7 +142,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </div>
 
             {h2h && h2h.total > 0 && (
-              <div className="mt-4 border border-[#1F1915]/25 bg-[#F4EEDB]/70 px-4 py-3">
+              <div className="order-1 mt-4 border border-[#1F1915]/25 bg-[#F4EEDB]/70 px-4 py-3 md:order-none">
                 <p className="font-mono-plate text-[8px] font-bold uppercase tracking-[0.22em] text-[#1F1915]/55">
                   Your record against {profile.username}
                 </p>
@@ -155,16 +155,16 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               </div>
             )}
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid grid-cols-2 gap-3 md:mt-6">
               {isOwnProfile ? (
                 <>
-                  <Link href="/play/online" className={`${primaryBtn} sm:col-span-2`}>
+                  <Link href="/play/online" className={`${primaryBtn} col-span-2`}>
                     Play online
                   </Link>
-                  <Link href="/play/computer" className={secondaryBtn}>
+                  <Link href="/play/computer" className={`${secondaryBtn} col-span-2 sm:col-span-1`}>
                     Play with computer
                   </Link>
-                  <Link href="/play/local" className={secondaryBtn}>
+                  <Link href="/play/local" className={`${secondaryBtn} col-span-2 sm:col-span-1`}>
                     Pass and play
                   </Link>
                   <Link href="/games" className={ghostBtn}>
@@ -174,7 +174,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 </>
               ) : (
                 <>
-                  <Link href="/play/online" className={`${primaryBtn} sm:col-span-2`}>
+                  <Link href="/play/online" className={`${primaryBtn} col-span-2`}>
                     Challenge a game
                   </Link>
                   <Link href="/leaderboard" className={ghostBtn}>
