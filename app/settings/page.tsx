@@ -59,7 +59,7 @@ export default function SettingsPage() {
             </h1>
           </div>
           <Link
-            href="/"
+            href="/profile"
             className="font-mono-plate text-[9px] font-bold uppercase tracking-[0.18em] text-[#1F1915]/65 hover:text-[#1F1915]"
           >
             Close

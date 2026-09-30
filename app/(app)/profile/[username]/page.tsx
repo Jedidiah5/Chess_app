@@ -80,7 +80,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       <div className="relative z-10 mx-auto w-full max-w-5xl px-5 py-6 sm:px-8 sm:py-8">
         <header className="landing-double-rule-bottom flex items-center justify-between gap-4 pb-4">
           <Link
-            href="/"
+            href="/profile"
             className="font-serif-title text-3xl font-semibold tracking-tight"
           >
             Chess
