@@ -1,4 +1,4 @@
-const CACHE_VERSION = "chess-vG-K_cGA3iL_5";
+const CACHE_VERSION = "chess-v10d9deb279af";
 const OFFLINE_FALLBACK = "/offline";
 
 /** Injected at build time from `.next/static` (see build-sw.mjs). */
@@ -55,62 +55,46 @@ const BUILD_STATIC = [
   "/_next/static/media/7088c2b12ccac062-s.woff2"
 ];
 
-/** Paths that must never be cached (auth, realtime, rest, functions). */
+/**
+ * The only HTML documents ever stored. They are client-rendered shells with no
+ * per-user data. Every other page (profile, games, leaderboard, settings, live
+ * games) may embed session data, so it is network-only.
+ */
+const SHELL_PAGES = ["/offline", "/play/local", "/play/computer"];
+
 function isSupabaseRequest(url) {
   const host = url.hostname;
-  if (host.includes("supabase.co") || host.includes("supabase.in")) {
-    return true;
-  }
-  return false;
+  return host.includes("supabase.co") || host.includes("supabase.in");
 }
 
-/** Routes that work fully offline (HTML shell + client logic). */
-function isOfflineShellPath(pathname) {
-  return (
-    pathname === "/play" ||
-    pathname === "/play/local" ||
-    pathname === "/play/computer" ||
-    pathname === "/offline"
-  );
+function stripTrailingSlash(pathname) {
+  return pathname.replace(/(.)\/$/, "$1");
 }
 
-function isOnlineOnlyNavigation(pathname) {
-  if (pathname.startsWith("/play/online")) return true;
-  if (
-    pathname.startsWith("/play/") &&
-    !pathname.startsWith("/play/local") &&
-    !pathname.startsWith("/play/computer")
-  ) {
-    if (pathname !== "/play") return true;
-  }
-  if (pathname.startsWith("/leaderboard")) return true;
-  if (pathname.startsWith("/games")) return true;
-  if (pathname.startsWith("/join/")) return true;
-  if (pathname.startsWith("/profile")) return true;
-  if (pathname.startsWith("/login") || pathname.startsWith("/username")) {
-    return true;
-  }
-  if (pathname.startsWith("/api/")) return true;
-  return false;
+function isShellPage(pathname) {
+  return SHELL_PAGES.includes(stripTrailingSlash(pathname));
 }
 
-function isNextAsset(pathname) {
-  return pathname.startsWith("/_next/");
-}
-
-function isImmutableStatic(pathname) {
+/** Build output, Stockfish, and icons: immutable, never user-specific. */
+function isStaticAsset(pathname) {
   return (
     pathname.startsWith("/_next/static/") ||
     pathname.startsWith("/stockfish/") ||
-    pathname.startsWith("/icons/")
+    pathname.startsWith("/icons/") ||
+    pathname === "/manifest.webmanifest"
   );
 }
 
+function isCacheablePath(pathname) {
+  return isShellPage(pathname) || isStaticAsset(pathname);
+}
+
+function isCacheableResponse(response) {
+  return response.ok && response.type === "basic" && !response.redirected;
+}
+
 const PRECACHE = [
-  "/play",
-  "/play/local",
-  "/play/computer",
-  "/offline",
+  ...SHELL_PAGES,
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -124,7 +108,7 @@ async function precacheAll(cache) {
     PRECACHE.map(async (url) => {
       try {
         const response = await fetch(url, { cache: "reload" });
-        if (response.ok) {
+        if (isCacheableResponse(response)) {
           await cache.put(url, response);
         }
       } catch {
@@ -134,12 +118,27 @@ async function precacheAll(cache) {
   );
 }
 
+/** Drops anything outside the allowlist, e.g. pages stored by an older worker. */
+async function purgeDisallowedEntries(cache) {
+  const requests = await cache.keys();
+  await Promise.all(
+    requests
+      .filter((request) => !isCacheablePath(new URL(request.url).pathname))
+      .map((request) => cache.delete(request)),
+  );
+}
+
 async function matchCachedPage(cache, pathname) {
+  const bare = stripTrailingSlash(pathname);
   return (
-    (await cache.match(pathname)) ||
-    (await cache.match(pathname + "/")) ||
+    (await cache.match(bare)) ||
+    (await cache.match(bare + "/")) ||
     null
   );
+}
+
+function offlineResponse() {
+  return new Response("Offline", { status: 503, statusText: "Offline" });
 }
 
 self.addEventListener("install", (event) => {
@@ -161,6 +160,7 @@ self.addEventListener("activate", (event) => {
           .filter((key) => key.startsWith("chess-v") && key !== CACHE_VERSION)
           .map((key) => caches.delete(key)),
       );
+      await purgeDisallowedEntries(await caches.open(CACHE_VERSION));
       await self.clients.claim();
     })(),
   );
@@ -179,61 +179,33 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (isSupabaseRequest(url)) {
-    event.respondWith(fetch(request));
-    return;
-  }
-
-  if (url.origin !== self.location.origin) {
+  if (isSupabaseRequest(url) || url.origin !== self.location.origin) {
     return;
   }
 
   const pathname = url.pathname;
-  const cachePromise = caches.open(CACHE_VERSION);
 
-  // Never cache or intercept the one-shot SW reset page.
   if (pathname === "/clear-sw.html") {
-    event.respondWith(fetch(request));
     return;
   }
 
-  if (request.mode === "navigate" && isOnlineOnlyNavigation(pathname)) {
-    event.respondWith(
-      (async () => {
-        try {
-          return await fetch(request);
-        } catch {
-          const cache = await cachePromise;
-          return (
-            (pathname === "/profile"
-              ? await matchCachedPage(cache, "/play")
-              : null) ||
-            (await matchCachedPage(cache, OFFLINE_FALLBACK)) ||
-            new Response("Offline", { status: 503, statusText: "Offline" })
-          );
-        }
-      })(),
-    );
-    return;
-  }
-
-  // Offline shell pages: network-first, keep a copy, fall back to cache.
+  // HTML documents: network-first. Only shell pages are stored; everything
+  // else falls back to the offline page, never to a cached copy of itself.
   if (request.mode === "navigate") {
     event.respondWith(
       (async () => {
-        const cache = await cachePromise;
+        const cache = await caches.open(CACHE_VERSION);
         try {
           const response = await fetch(request);
-          if (response.ok && isOfflineShellPath(pathname)) {
-            void cache.put(pathname, response.clone());
+          if (isShellPage(pathname) && isCacheableResponse(response)) {
+            void cache.put(stripTrailingSlash(pathname), response.clone());
           }
           return response;
         } catch {
           return (
-            (await matchCachedPage(cache, pathname)) ||
-            (await matchCachedPage(cache, "/play")) ||
+            (isShellPage(pathname) ? await matchCachedPage(cache, pathname) : null) ||
             (await matchCachedPage(cache, OFFLINE_FALLBACK)) ||
-            new Response("Offline", { status: 503, statusText: "Offline" })
+            offlineResponse()
           );
         }
       })(),
@@ -241,67 +213,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Hashed Next assets + Stockfish + icons: cache-first.
-  if (isImmutableStatic(pathname)) {
+  if (isStaticAsset(pathname)) {
     event.respondWith(
       (async () => {
-        const cache = await cachePromise;
+        const cache = await caches.open(CACHE_VERSION);
         const cached =
           (await cache.match(request)) || (await cache.match(pathname));
         if (cached) return cached;
         try {
           const response = await fetch(request);
-          if (response.ok && response.type === "basic") {
+          if (isCacheableResponse(response)) {
             void cache.put(pathname, response.clone());
           }
           return response;
         } catch {
-          return new Response("Offline", { status: 503, statusText: "Offline" });
+          return offlineResponse();
         }
       })(),
     );
-    return;
   }
 
-  // Other /_next requests (RSC, etc.): network, then cache if we have it.
-  if (isNextAsset(pathname)) {
-    event.respondWith(
-      (async () => {
-        const cache = await cachePromise;
-        try {
-          return await fetch(request);
-        } catch {
-          return (
-            (await cache.match(request)) ||
-            (await cache.match(pathname)) ||
-            new Response("Offline", { status: 503, statusText: "Offline" })
-          );
-        }
-      })(),
-    );
-    return;
-  }
-
-  event.respondWith(
-    (async () => {
-      const cache = await cachePromise;
-      try {
-        const response = await fetch(request);
-        if (
-          response.ok &&
-          response.type === "basic" &&
-          !pathname.startsWith("/api/")
-        ) {
-          void cache.put(pathname, response.clone());
-        }
-        return response;
-      } catch {
-        return (
-          (await cache.match(request)) ||
-          (await cache.match(pathname)) ||
-          new Response("Offline", { status: 503, statusText: "Offline" })
-        );
-      }
-    })(),
-  );
+  // Anything else (RSC payloads, /api, images) is left to the network.
 });

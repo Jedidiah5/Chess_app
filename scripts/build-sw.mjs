@@ -1,6 +1,6 @@
 /**
  * After `next build`, stamps a unique cache version into public/sw.js and
- * injects `/_next/static/*` URLs so the offline shell (play / local / computer)
+ * injects `/_next/static/*` URLs so the offline shell (offline / local / computer)
  * has JS, CSS, and fonts without a network.
  */
 import fs from "node:fs";

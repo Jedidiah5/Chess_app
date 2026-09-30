@@ -177,6 +177,21 @@ export async function getCachedOnlineGame(
   return (await db.get("cached_games", id)) ?? null;
 }
 
+/** Wipes every store so nothing from this account outlives sign-out. */
+export async function clearOfflineData(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(
+    ["active_offline_game", "offline_games", "cached_games"],
+    "readwrite",
+  );
+  await Promise.all([
+    tx.objectStore("active_offline_game").clear(),
+    tx.objectStore("offline_games").clear(),
+    tx.objectStore("cached_games").clear(),
+    tx.done,
+  ]);
+}
+
 export function newOfflineId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();

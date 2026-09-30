@@ -20,12 +20,6 @@ export default function OfflinePage() {
           >
             Pass &amp; play
           </a>
-          <a
-            href="/play"
-            className="text-sm text-stone-700 underline-offset-2 hover:underline"
-          >
-            Play menu
-          </a>
         </div>
       </div>
     </main>

@@ -475,11 +475,17 @@ Because it runs on-device: zero server cost, zero latency, works with the phone 
 **What works offline:** pass-and-play, vs-computer, browsing your local game archive, replaying finished games already cached.
 **What doesn't:** online multiplayer, leaderboard, starting a rated game. These show a clear "you're offline" state rather than failing silently.
 
-Service worker precaches the app shell, board assets, and the Stockfish WASM binary. IndexedDB stores:
+Service worker precaches the app shell, board assets, and the Stockfish WASM binary.
+
+**Cache allowlist.** The only HTML the service worker ever stores is `/offline`, `/play/local`, and `/play/computer` — client-rendered shells with no per-user data. Static assets (`/_next/static/*`, Stockfish, icons, manifest) are cache-first. Every other document is network-first with `/offline` as its only fallback, and RSC payloads, `/api/*`, and Supabase requests are never intercepted. Server-rendered pages built from the session (`/profile/*`, `/games`, `/leaderboard`, `/settings`, any route with a game id) must never be cached: a cached live game would bypass the reconnect-and-replay path in §10, and a cached archive leaks to anyone sharing the browser profile. On activate the worker deletes older cache versions and purges any entry outside the allowlist.
+
+IndexedDB stores:
 
 - `offline_games` — completed pass-and-play and vs-computer games
 - `active_offline_game` — the in-progress local game, written after every move so closing the tab loses nothing
 - `cached_games` — read-only copies of finished online games for offline replay
+
+Signing out makes one upload attempt for pending offline games, then clears all three stores. Games that still fail to upload are dropped instead of left to upload into the next account that signs in on the device.
 
 **The sync story is deliberately trivial.** Offline games are unrated, so they never touch a rating, a leaderboard, or a head-to-head record. When connectivity returns, they upload to the archive as `rated = false` rows — or don't, and nothing breaks. There's no conflict resolution because there's nothing to conflict over. This is the payoff from decision 3 in section 1.
 

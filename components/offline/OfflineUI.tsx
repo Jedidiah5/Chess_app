@@ -56,10 +56,10 @@ export function OfflineGate({
             one.
           </p>
           <a
-            href="/play"
+            href="/offline"
             className="mt-6 inline-block text-sm text-stone-800 underline-offset-2 hover:underline"
           >
-            Back to play menu
+            Offline modes
           </a>
         </div>
       </main>
