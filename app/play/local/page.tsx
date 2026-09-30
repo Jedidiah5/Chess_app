@@ -38,11 +38,6 @@ type PendingPromotion = {
   to: Square;
 };
 
-type LastMove = {
-  from: Square;
-  to: Square;
-};
-
 export default function LocalPlayPage() {
   const router = useRouter();
   const { settings } = useAppSettings();
@@ -55,7 +50,6 @@ export default function LocalPlayPage() {
   const [moves, setMoves] = useState<OfflineMove[]>([]);
   const [gameId, setGameId] = useState(() => newOfflineId());
   const [ready, setReady] = useState(false);
-  const [lastMove, setLastMove] = useState<LastMove | null>(null);
 
   const {
     motionPieces,
@@ -149,7 +143,6 @@ export default function LocalPlayPage() {
       setMoves(nextMoves);
       setSelectedSquare(null);
       setPendingPromotion(null);
-      setLastMove({ from, to });
       playMove(anim, next.board);
       void persistActive(next.fen, next.history, nextMoves);
 
@@ -231,7 +224,6 @@ export default function LocalPlayPage() {
     setSelectedSquare(null);
     setPendingPromotion(null);
     setDismissedOver(false);
-    setLastMove(null);
     snapTo(fresh.board, null);
     void clearActiveOfflineGame();
   }, [snapTo]);
@@ -265,16 +257,15 @@ export default function LocalPlayPage() {
       <div className="mx-auto flex max-w-4xl flex-col gap-8 lg:flex-row lg:items-start">
         <section className="flex flex-1 flex-col items-center gap-5">
           <header className="w-full max-w-[min(90vw,560px)]">
-            <div className="flex items-baseline justify-between gap-2 sm:gap-4">
+            <div className="flex items-baseline justify-between gap-4">
               <h1
-                className="shrink-0 text-xl font-semibold tracking-[-0.02em] sm:text-2xl"
+                className="text-2xl font-semibold tracking-[-0.02em]"
                 style={{ color: "var(--ink)" }}
               >
                 Pass &amp; play
               </h1>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <span className="meta-caps hidden xs:inline">One device · Unrated</span>
-                <span className="meta-caps xs:hidden">Unrated</span>
+              <div className="flex items-center gap-3">
+                <span className="meta-caps">One device · Unrated</span>
                 <SettingsGearButton onClick={() => setSettingsOpen(true)} />
               </div>
             </div>
@@ -298,7 +289,6 @@ export default function LocalPlayPage() {
             legalTargets={legalTargets}
             inCheckSquare={inCheckSquare}
             onSquareTap={handleSquareTap}
-            lastMove={lastMove}
           />
 
           <div className="flex flex-wrap justify-center gap-3">

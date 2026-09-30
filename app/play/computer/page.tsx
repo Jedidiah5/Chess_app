@@ -46,11 +46,6 @@ type PendingPromotion = {
   to: Square;
 };
 
-type LastMove = {
-  from: Square;
-  to: Square;
-};
-
 type SetupState = {
   level: StockfishLevel;
   playerColor: Color;
@@ -71,7 +66,6 @@ export default function ComputerPlayPage() {
   const [thinking, setThinking] = useState(false);
   const [moves, setMoves] = useState<OfflineMove[]>([]);
   const [gameId, setGameId] = useState(() => newOfflineId());
-  const [lastMove, setLastMove] = useState<LastMove | null>(null);
   const stockfishRef = useRef<ReturnType<typeof createStockfish> | null>(null);
   const thinkGen = useRef(0);
 
@@ -211,7 +205,6 @@ export default function ComputerPlayPage() {
       setMoves(nextMoves);
       setSelectedSquare(null);
       setPendingPromotion(null);
-      setLastMove({ from, to });
       playMove(anim, next.board);
       void persistActive(next.fen, next.history, nextMoves, cfg);
 
@@ -261,7 +254,6 @@ export default function ComputerPlayPage() {
         );
         setEngine(next);
         setMoves(nextMoves);
-        setLastMove({ from: parsed.from, to: parsed.to });
         playMove(anim, next.board);
         void persistActive(next.fen, next.history, nextMoves, cfg);
         if (next.terminal.over) {
@@ -367,7 +359,6 @@ export default function ComputerPlayPage() {
     setPendingPromotion(null);
     setDismissedOver(false);
     setGameId(newOfflineId());
-    setLastMove(null);
     snapTo(createEngine().board, null);
     void clearActiveOfflineGame();
   }, [snapTo]);
@@ -505,7 +496,6 @@ export default function ComputerPlayPage() {
             legalTargets={legalTargets}
             inCheckSquare={inCheckSquare}
             onSquareTap={handleSquareTap}
-            lastMove={lastMove}
           />
 
           <div className="flex flex-wrap justify-center gap-3">

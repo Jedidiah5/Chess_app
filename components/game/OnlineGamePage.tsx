@@ -38,7 +38,6 @@ import {
 } from "@/components/game/GameOverModal";
 import { subscribeToGame, unsubscribeFromGame } from "@/lib/supabase/realtime";
 import type { GameRow, MoveRow } from "@/types/game";
-import { getTimeControlLabel } from "@/lib/chess/timeControl";
 import {
   GameSettingsSheet,
   SettingsGearButton,
@@ -142,14 +141,6 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
   }, [engine]);
 
   const sanHistory = useMemo(() => moves.map((move) => move.san), [moves]);
-
-  const lastMove = useMemo(() => {
-    if (moves.length === 0) return null;
-    const last = moves[moves.length - 1];
-    const from = last.uci.slice(0, 2) as Square;
-    const to = last.uci.slice(2, 4) as Square;
-    return { from, to };
-  }, [moves]);
 
   const isMyTurn = useMemo(() => {
     if (!game || !userId || game.status !== "active") {
@@ -642,9 +633,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
                 Online game
               </h1>
               <div className="flex items-center gap-3">
-                <span className="meta-caps">
-                  Rated · {getTimeControlLabel(game.initial_ms ?? 0)}
-                </span>
+                <span className="meta-caps">Rated</span>
                 <SettingsGearButton onClick={() => setSettingsOpen(true)} />
               </div>
             </div>
@@ -708,7 +697,6 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
                 legalTargets={legalTargets}
                 inCheckSquare={inCheckSquare}
                 onSquareTap={handleSquareTap}
-                lastMove={lastMove}
               />
 
               <Clock
