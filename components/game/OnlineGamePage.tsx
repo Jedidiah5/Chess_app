@@ -564,7 +564,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
   if (loadError) {
     return (
-      <main className="paper-grain min-h-dvh px-5 py-12">
+      <main className="landing-paper min-h-dvh px-5 py-12">
         <PaperCard className="mx-auto max-w-md">
           <h1
             className="text-xl font-semibold tracking-tight"
@@ -593,7 +593,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
 
   if (loading || !game || !userId) {
     return (
-      <main className="paper-grain flex min-h-dvh items-center justify-center px-4">
+      <main className="landing-paper flex min-h-dvh items-center justify-center px-4">
         <p className="meta-caps">Loading game</p>
       </main>
     );

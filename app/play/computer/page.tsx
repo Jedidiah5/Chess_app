@@ -411,7 +411,7 @@ export default function ComputerPlayPage() {
 
   if (restoring) {
     return (
-      <main className="paper-grain flex min-h-dvh items-center justify-center px-4">
+      <main className="landing-paper flex min-h-dvh items-center justify-center px-4">
         <p className="meta-caps">Loading</p>
       </main>
     );

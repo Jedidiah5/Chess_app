@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { GameReplay } from "@/components/game/GameReplay";
 import { RematchButton } from "@/components/game/RematchButton";
 import { CacheOnlineGameEffect } from "@/components/offline/CacheOnlineGameEffect";
+import { PlatePage } from "@/components/ui/PlatePage";
+import { eyebrow } from "@/components/ui/plateStyles";
 import { createClient } from "@/lib/supabase/server";
 import { fetchMoves, gameResultLabel } from "@/lib/supabase/games";
 import { fetchGameForReplay } from "@/lib/supabase/stats";
@@ -54,7 +55,13 @@ export default async function GameReplayPage({ params }: PageProps) {
     : blackRel?.username ?? "Black";
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-8">
+    <PlatePage
+      width="max-w-5xl"
+      nav={[
+        { href: "/games", label: "Archive" },
+        { href: "/profile", label: "Profile" },
+      ]}
+    >
       <CacheOnlineGameEffect
         id={game.id}
         whiteUsername={whiteName}
@@ -71,39 +78,31 @@ export default async function GameReplayPage({ params }: PageProps) {
           fen_after: move.fen_after,
         }))}
       />
-      <div className="mx-auto mb-6 flex max-w-4xl flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-900">
-            {whiteName} vs {blackName}
+      <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className={eyebrow}>
+            {label}
+            {game.rated ? " · Rated" : " · Unrated"}
+          </p>
+          <h1 className="mt-2 font-serif-title text-4xl font-semibold tracking-tight sm:text-5xl">
+            {whiteName} <span className="text-[#1F1915]/45">vs</span> {blackName}
           </h1>
-          {!game.rated && (
-            <span className="mt-1 inline-block rounded bg-stone-200 px-2 py-0.5 text-xs text-stone-600">
-              unrated
-            </span>
-          )}
         </div>
-        <div className="flex gap-3">
-          {game.status === "finished" && game.black_id && (
-            <RematchButton gameId={game.id} />
-          )}
-          <Link
-            href="/games"
-            className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
-          >
-            Archive
-          </Link>
-        </div>
+        {game.status === "finished" && game.black_id && (
+          <RematchButton gameId={game.id} />
+        )}
       </div>
 
-      <GameReplay
-        orientation={orientation}
-        moves={moves.map((move) => ({
-          ply: move.ply,
-          san: move.san,
-          fen_after: move.fen_after,
-        }))}
-        resultLabel={label}
-      />
-    </main>
+      <div className="mt-8 pb-12">
+        <GameReplay
+          orientation={orientation}
+          moves={moves.map((move) => ({
+            ply: move.ply,
+            san: move.san,
+            fen_after: move.fen_after,
+          }))}
+        />
+      </div>
+    </PlatePage>
   );
 }

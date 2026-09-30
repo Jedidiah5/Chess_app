@@ -37,7 +37,7 @@ export default function PlayOnlinePage() {
 
   return (
     <OfflineGate feature="Online play">
-      <main className="paper-grain min-h-dvh px-5 py-10 sm:py-14">
+      <main className="landing-paper min-h-dvh px-5 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-md">
           <header>
             <div className="flex items-center gap-4">

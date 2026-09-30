@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { ProfilePawn } from "@/components/profile/ProfilePawn";
-import { SettingsGearLink } from "@/components/settings/SettingsGear";
+import { PlatePage } from "@/components/ui/PlatePage";
+import { ghostBtn, primaryBtn, secondaryBtn } from "@/components/ui/plateStyles";
 import { getProfileByUsername } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -16,13 +17,6 @@ import { isOnboarded } from "@/types/profile";
 type ProfilePageProps = {
   params: Promise<{ username: string }>;
 };
-
-const primaryBtn =
-  "flex w-full items-center justify-center border border-[#1F1915] bg-[#1F1915] px-5 py-3.5 font-mono-plate text-[11px] font-bold uppercase tracking-[0.2em] text-[#E7DFD2] transition hover:bg-[#2D241E] active:scale-[0.99]";
-const secondaryBtn =
-  "flex w-full items-center justify-center border border-[#1F1915] bg-[#E7DFD2] px-5 py-3.5 font-mono-plate text-[11px] font-bold uppercase tracking-[0.2em] text-[#1F1915] transition hover:bg-[#1F1915] hover:text-[#E7DFD2] active:scale-[0.99]";
-const ghostBtn =
-  "flex w-full items-center justify-center border border-[#1F1915]/50 bg-transparent px-5 py-3 font-mono-plate text-[10px] font-bold uppercase tracking-[0.2em] text-[#1F1915] transition hover:border-[#1F1915] hover:bg-[#1F1915]/5 active:scale-[0.99]";
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
@@ -71,31 +65,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   ].filter(Boolean);
 
   return (
-    <main className="landing-paper relative min-h-dvh overflow-hidden text-[#1F1915] antialiased selection:bg-[#1F1915] selection:text-[#EAE3D2]">
-      <div
-        className="landing-archival-grain pointer-events-none absolute inset-0 opacity-20"
-        aria-hidden
-      />
-
-      <div className="relative z-10 mx-auto w-full max-w-5xl px-5 py-6 sm:px-8 sm:py-8">
-        <header className="landing-double-rule-bottom flex items-center justify-between gap-4 pb-4">
-          <Link
-            href="/profile"
-            className="font-serif-title text-3xl font-semibold tracking-tight"
-          >
-            Chess
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/leaderboard"
-              className="font-mono-plate text-[9px] font-bold uppercase tracking-[0.18em] text-[#1F1915]/65 hover:text-[#1F1915]"
-            >
-              Ladder
-            </Link>
-            <SettingsGearLink />
-          </div>
-        </header>
-
+    <PlatePage width="max-w-5xl" nav={[{ href: "/leaderboard", label: "Ladder" }]}>
         <div className="mt-2 grid items-center gap-2 md:mt-8 md:grid-cols-[1fr_1.1fr] md:gap-10">
           <section className="relative" aria-hidden>
             <ProfilePawn className="h-[150px] w-full sm:h-[300px] md:h-[500px]" />
@@ -188,7 +158,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </div>
           </section>
         </div>
-      </div>
-    </main>
+    </PlatePage>
   );
 }

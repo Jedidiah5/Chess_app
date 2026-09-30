@@ -15,10 +15,17 @@ type ReplayMove = {
 type GameReplayProps = {
   orientation: BoardOrientation;
   moves: ReplayMove[];
-  resultLabel: string;
 };
 
-export function GameReplay({ orientation, moves, resultLabel }: GameReplayProps) {
+const stepBtn =
+  "border border-[#1F1915]/50 px-3.5 py-2 font-mono-plate text-[10px] font-bold uppercase tracking-[0.18em] text-[#1F1915] transition hover:border-[#1F1915] hover:bg-[#1F1915] hover:text-[#E7DFD2] disabled:pointer-events-none disabled:opacity-35";
+
+const moveBtn = (active: boolean) =>
+  `px-1.5 py-0.5 text-left transition ${
+    active ? "bg-[#1F1915] text-[#E7DFD2]" : "hover:bg-[#1F1915]/10"
+  }`;
+
+export function GameReplay({ orientation, moves }: GameReplayProps) {
   const [ply, setPly] = useState(moves.length);
 
   const fen = useMemo(() => {
@@ -62,9 +69,8 @@ export function GameReplay({ orientation, moves, resultLabel }: GameReplayProps)
   }, [goTo, moves.length, ply]);
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-8 lg:flex-row lg:items-start">
+    <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
       <section className="flex flex-1 flex-col items-center gap-4">
-        <p className="text-stone-600">{resultLabel}</p>
         <Board
           pieces={engine.board}
           orientation={orientation}
@@ -73,61 +79,52 @@ export function GameReplay({ orientation, moves, resultLabel }: GameReplayProps)
           inCheckSquare={null}
           onSquareTap={() => undefined}
         />
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm"
-            onClick={() => goTo(0)}
-          >
+        <div className="flex flex-wrap justify-center gap-2">
+          <button type="button" className={stepBtn} disabled={ply === 0} onClick={() => goTo(0)}>
             Start
           </button>
-          <button
-            type="button"
-            className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm"
-            onClick={() => goTo(ply - 1)}
-          >
+          <button type="button" className={stepBtn} disabled={ply === 0} onClick={() => goTo(ply - 1)}>
             Prev
           </button>
           <button
             type="button"
-            className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm"
+            className={stepBtn}
+            disabled={ply === moves.length}
             onClick={() => goTo(ply + 1)}
           >
             Next
           </button>
           <button
             type="button"
-            className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm"
+            className={stepBtn}
+            disabled={ply === moves.length}
             onClick={() => goTo(moves.length)}
           >
             End
           </button>
         </div>
-        <p className="text-xs text-stone-500">
-          Arrow keys to step · {ply}/{moves.length}
+        <p className="font-mono-plate text-[9px] uppercase tracking-[0.18em] text-[#1F1915]/55">
+          Arrow keys to step · <span className="tabular-nums">{ply}/{moves.length}</span>
         </p>
       </section>
 
-      <aside className="w-full rounded-lg border border-stone-200 bg-white p-4 lg:w-64">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">
-          Moves
+      <aside className="landing-plate-card w-full lg:w-64">
+        <h2 className="font-mono-plate text-[9px] font-bold uppercase tracking-[0.24em] text-[#1F1915]/55">
+          Score sheet
         </h2>
-        <div className="space-y-1 text-sm font-mono">
+        <div className="mt-3 max-h-[60vh] space-y-0.5 overflow-y-auto font-mono-plate text-[12px] text-[#1F1915]">
           {moves.length === 0 ? (
-            <p className="text-stone-500">No moves.</p>
+            <p className="text-[#1F1915]/55">No moves.</p>
           ) : (
             Array.from({ length: Math.ceil(moves.length / 2) }, (_, i) => {
               const whitePly = i * 2 + 1;
               const blackPly = i * 2 + 2;
               return (
-                <div key={i} className="flex gap-2">
-                  <span className="w-6 text-stone-400">{i + 1}.</span>
+                <div key={i} className="grid grid-cols-[2rem_1fr_1fr] items-center gap-1">
+                  <span className="tabular-nums text-[#1F1915]/45">{i + 1}.</span>
                   <button
                     type="button"
-                    className={[
-                      "rounded px-1",
-                      ply === whitePly ? "bg-stone-800 text-white" : "hover:bg-stone-100",
-                    ].join(" ")}
+                    className={moveBtn(ply === whitePly)}
                     onClick={() => goTo(whitePly)}
                   >
                     {moves[i * 2]?.san ?? ""}
@@ -135,10 +132,7 @@ export function GameReplay({ orientation, moves, resultLabel }: GameReplayProps)
                   {moves[i * 2 + 1] && (
                     <button
                       type="button"
-                      className={[
-                        "rounded px-1",
-                        ply === blackPly ? "bg-stone-800 text-white" : "hover:bg-stone-100",
-                      ].join(" ")}
+                      className={moveBtn(ply === blackPly)}
                       onClick={() => goTo(blackPly)}
                     >
                       {moves[i * 2 + 1]?.san}

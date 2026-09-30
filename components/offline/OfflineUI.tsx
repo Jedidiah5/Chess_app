@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { PlateNotice } from "@/components/ui/PlatePage";
+import { eyebrow, primaryBtn, secondaryBtn } from "@/components/ui/plateStyles";
 import { tryUploadPendingOfflineGames } from "@/lib/offline/upload";
 
 function subscribeOnline(onChange: () => void) {
@@ -29,10 +31,10 @@ export function OfflineIndicator() {
   if (online) return null;
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-[60] bg-[#2c2a26] px-3 py-1.5 text-center text-xs text-[#f4efe4]"
+      className="fixed left-0 right-0 top-0 z-[60] bg-[#1F1915] px-3 py-1.5 text-center font-mono-plate text-[9px] font-bold uppercase tracking-[0.18em] text-[#E7DFD2]"
       role="status"
     >
-      You&apos;re offline — pass &amp; play and vs computer still work
+      Offline · pass &amp; play and vs computer still work
     </div>
   );
 }
@@ -48,21 +50,24 @@ export function OfflineGate({
   const online = useOnlineStatus();
   if (!online) {
     return (
-      <main className="min-h-screen bg-[#ebe4d6] px-4 py-12">
-        <div className="mx-auto max-w-md text-center">
-          <h1 className="text-2xl font-semibold text-stone-900">You&apos;re offline</h1>
-          <p className="mt-3 text-sm text-stone-600">
-            {feature} needs a connection. Pass &amp; play and vs computer work without
-            one.
-          </p>
-          <a
-            href="/offline"
-            className="mt-6 inline-block text-sm text-stone-800 underline-offset-2 hover:underline"
-          >
-            Offline modes
+      <PlateNotice>
+        <p className={eyebrow}>No connection</p>
+        <h1 className="mt-2 font-serif-title text-4xl font-semibold tracking-tight">
+          You&apos;re offline
+        </h1>
+        <p className="mt-3 font-mono-plate text-[10px] uppercase leading-relaxed tracking-[0.14em] text-[#1F1915]/65">
+          {feature} needs a connection. Pass &amp; play and vs computer work
+          without one.
+        </p>
+        <div className="mt-6 flex flex-col gap-3">
+          <a href="/play/computer" className={primaryBtn}>
+            Play with computer
+          </a>
+          <a href="/play/local" className={secondaryBtn}>
+            Pass and play
           </a>
         </div>
-      </main>
+      </PlateNotice>
     );
   }
   return <>{children}</>;

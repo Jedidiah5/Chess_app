@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { PlateNotice } from "@/components/ui/PlatePage";
+import { alertBox, eyebrow, navLink } from "@/components/ui/plateStyles";
 import { acceptInvite } from "@/lib/supabase/functions";
 
 type JoinPageProps = {
@@ -39,26 +41,33 @@ export function JoinPage({ code }: JoinPageProps) {
   }, [code, router]);
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-12">
-      <div className="mx-auto max-w-md rounded-lg border border-stone-200 bg-white p-6 text-center shadow-sm">
-        {errorMessage ? (
-          <>
-            <h1 className="text-xl font-semibold text-stone-900">Could not join game</h1>
-            <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
-            <Link
-              href="/profile"
-              className="mt-6 inline-block text-sm text-stone-700 underline-offset-2 hover:underline"
-            >
+    <PlateNotice>
+      {errorMessage ? (
+        <>
+          <p className={eyebrow}>Invite {code.toUpperCase()}</p>
+          <h1 className="mt-2 font-serif-title text-4xl font-semibold tracking-tight">
+            Couldn&apos;t join
+          </h1>
+          <p className={`mt-4 text-left first-letter:uppercase ${alertBox}`} role="alert">
+            {errorMessage}
+          </p>
+          <div className="mt-5 border-t border-[#1F1915]/20 pt-4">
+            <Link href="/profile" className={navLink}>
               Back to profile
             </Link>
-          </>
-        ) : (
-          <>
-            <h1 className="text-xl font-semibold text-stone-900">Joining game…</h1>
-            <p className="mt-2 text-sm text-stone-600">Accepting invite {code}</p>
-          </>
-        )}
-      </div>
-    </main>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className={eyebrow}>Invite {code.toUpperCase()}</p>
+          <h1 className="mt-2 font-serif-title text-4xl font-semibold tracking-tight">
+            Joining game…
+          </h1>
+          <p className="mt-2 font-mono-plate text-[9px] uppercase tracking-[0.18em] text-[#1F1915]/60">
+            Setting up the board
+          </p>
+        </>
+      )}
+    </PlateNotice>
   );
 }
