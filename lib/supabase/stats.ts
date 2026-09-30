@@ -13,6 +13,16 @@ export type LeaderboardRow = {
   draws: number;
 };
 
+/** Must match the `games_played >= 5` filter in the `leaderboard` view. */
+export const RANKED_MIN_GAMES = 5;
+
+export type ProvisionalRow = {
+  id: string;
+  username: string;
+  rating: number;
+  games_played: number;
+};
+
 export type HeadToHead = {
   wins: number;
   losses: number;
@@ -53,6 +63,47 @@ export async function fetchLeaderboardTop(
   }
 
   return (data ?? []) as LeaderboardRow[];
+}
+
+/** Players below the ranking threshold, closest to ranking first. */
+export async function fetchProvisionalPlayers(
+  supabase: SupabaseClient,
+  limit = 20,
+): Promise<ProvisionalRow[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, rating, games_played")
+    .not("username", "is", null)
+    .lt("games_played", RANKED_MIN_GAMES)
+    .order("games_played", { ascending: false })
+    .order("rating", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ProvisionalRow[];
+}
+
+/** Every named player by trophies, with no ranking threshold. */
+export async function fetchPlayersByTrophies(
+  supabase: SupabaseClient,
+  limit = 50,
+): Promise<ProvisionalRow[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, rating, games_played")
+    .not("username", "is", null)
+    .order("rating", { ascending: false })
+    .order("games_played", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ProvisionalRow[];
 }
 
 export async function fetchMyLeaderboardRank(
@@ -162,7 +213,7 @@ export function winRate(profile: OnboardedProfile): number | null {
 }
 
 export function gamesUntilRanked(gamesPlayed: number): number {
-  return Math.max(0, 5 - gamesPlayed);
+  return Math.max(0, RANKED_MIN_GAMES - gamesPlayed);
 }
 
 /** Streak from most recent rated finished games (newest first). */

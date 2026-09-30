@@ -96,7 +96,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 {profile.rating}
               </span>
               <span className="font-mono-plate text-[9px] font-bold uppercase tracking-[0.22em] text-[#1F1915]/55">
-                Rating
+                Trophies
               </span>
             </div>
 
