@@ -92,8 +92,8 @@ export default function PlayOnlinePage() {
           </PaperCard>
 
           <footer className="mt-8 text-center">
-            <Link href="/play" className="paper-link text-sm font-semibold">
-              Back to play menu
+            <Link href="/profile" className="paper-link text-sm font-semibold">
+              Back to profile
             </Link>
           </footer>
         </div>

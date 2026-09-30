@@ -36,8 +36,8 @@ export default async function GamesArchivePage({ searchParams }: GamesPageProps)
             >
               {includeUnrated ? "Hide unrated" : "Show unrated"}
             </Link>
-            <Link href="/play" className="text-stone-700 underline-offset-2 hover:underline">
-              Play
+            <Link href="/profile" className="text-stone-700 underline-offset-2 hover:underline">
+              Profile
             </Link>
           </div>
         </header>

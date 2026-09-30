@@ -368,7 +368,7 @@ export default function ComputerPlayPage() {
     stockfishRef.current?.dispose();
     stockfishRef.current = null;
     void clearActiveOfflineGame();
-    router.push("/play");
+    router.push("/profile");
   }, [router]);
 
   const startGame = useCallback(
@@ -443,8 +443,8 @@ export default function ComputerPlayPage() {
           </div>
 
           <footer className="mt-8 text-center">
-            <Link href="/play" className="paper-link text-sm font-semibold">
-              Back to play menu
+            <Link href="/profile" className="paper-link text-sm font-semibold">
+              Back to profile
             </Link>
           </footer>
         </div>
@@ -539,9 +539,14 @@ export default function ComputerPlayPage() {
           onDismiss={() => setDismissedOver(true)}
           dismissLabel="Close"
           actions={
-            <PaperButton variant="primary" onClick={handleNewGame}>
-              New game
-            </PaperButton>
+            <>
+              <PaperButton variant="primary" onClick={handleNewGame}>
+                New game
+              </PaperButton>
+              <PaperButton variant="ghost" onClick={handleQuit}>
+                Back to profile
+              </PaperButton>
+            </>
           }
         />
       )}

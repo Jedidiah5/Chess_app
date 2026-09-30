@@ -205,6 +205,9 @@ self.addEventListener("fetch", (event) => {
         } catch {
           const cache = await cachePromise;
           return (
+            (pathname === "/profile"
+              ? await matchCachedPage(cache, "/play")
+              : null) ||
             (await matchCachedPage(cache, OFFLINE_FALLBACK)) ||
             new Response("Offline", { status: 503, statusText: "Offline" })
           );

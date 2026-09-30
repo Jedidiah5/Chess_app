@@ -41,10 +41,10 @@ export default async function LeaderboardPage() {
             </p>
           </div>
           <Link
-            href="/play"
+            href="/profile"
             className="text-sm text-stone-700 underline-offset-2 hover:underline"
           >
-            Play
+            Profile
           </Link>
         </header>
 

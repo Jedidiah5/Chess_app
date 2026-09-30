@@ -230,7 +230,7 @@ export default function LocalPlayPage() {
 
   const handleQuit = useCallback(() => {
     void clearActiveOfflineGame();
-    router.push("/play");
+    router.push("/profile");
   }, [router]);
 
   const toggleOrientation = useCallback(() => {
@@ -337,9 +337,14 @@ export default function LocalPlayPage() {
           onDismiss={() => setDismissedOver(true)}
           dismissLabel="Close"
           actions={
-            <PaperButton variant="primary" onClick={handleNewGame}>
-              New game
-            </PaperButton>
+            <>
+              <PaperButton variant="primary" onClick={handleNewGame}>
+                New game
+              </PaperButton>
+              <PaperButton variant="ghost" onClick={handleQuit}>
+                Back to profile
+              </PaperButton>
+            </>
           }
         />
       )}

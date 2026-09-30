@@ -158,27 +158,30 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {isOwnProfile ? (
                 <>
-                  <Link href="/play" className={`${primaryBtn} sm:col-span-2`}>
-                    Play
+                  <Link href="/play/online" className={`${primaryBtn} sm:col-span-2`}>
+                    Play online
                   </Link>
-                  <Link href="/games" className={secondaryBtn}>
-                    Game archive
+                  <Link href="/play/computer" className={secondaryBtn}>
+                    Play with computer
                   </Link>
                   <Link href="/play/local" className={secondaryBtn}>
                     Pass and play
                   </Link>
-                  <SignOutButton className={`${ghostBtn} sm:col-span-2`} />
+                  <Link href="/games" className={ghostBtn}>
+                    Game archive
+                  </Link>
+                  <SignOutButton className={ghostBtn} />
                 </>
               ) : (
                 <>
-                  <Link href="/play" className={`${primaryBtn} sm:col-span-2`}>
+                  <Link href="/play/online" className={`${primaryBtn} sm:col-span-2`}>
                     Challenge a game
                   </Link>
                   <Link href="/leaderboard" className={ghostBtn}>
                     Leaderboard
                   </Link>
-                  <Link href="/play/local" className={ghostBtn}>
-                    Pass and play
+                  <Link href="/profile" className={ghostBtn}>
+                    My profile
                   </Link>
                 </>
               )}

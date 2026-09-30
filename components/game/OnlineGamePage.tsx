@@ -543,7 +543,7 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
   }, [inviteCode]);
 
   const handleQuit = useCallback(() => {
-    const leave = () => router.push("/play");
+    const leave = () => router.push("/profile");
     const status = gameRef.current?.status;
     if (status === "active") {
       void runClaim("resign").finally(leave);
@@ -581,10 +581,10 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
             redeploy the Edge Functions.
           </p>
           <Link
-            href="/play"
+            href="/profile"
             className="paper-link mt-5 inline-block text-sm font-semibold"
           >
-            Back to play menu
+            Back to profile
           </Link>
         </PaperCard>
       </main>
@@ -745,7 +745,14 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
                       reason={copy.reason}
                       onDismiss={() => setDismissedOver(true)}
                       dismissLabel="Close"
-                      actions={<RematchButton gameId={game.id} />}
+                      actions={
+                        <>
+                          <RematchButton gameId={game.id} />
+                          <PaperButton variant="ghost" href="/profile">
+                            Back to profile
+                          </PaperButton>
+                        </>
+                      }
                     />
                   );
                 })()}
@@ -757,8 +764,8 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
             </>
           )}
 
-          <Link href="/play" className="paper-link text-sm font-semibold">
-            Back to play menu
+          <Link href="/profile" className="paper-link text-sm font-semibold">
+            Back to profile
           </Link>
         </section>
 

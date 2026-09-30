@@ -138,8 +138,8 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-6 text-center font-mono-plate text-[9px] uppercase tracking-[0.18em] text-[#1F1915]/65">
-          <Link href="/play" className="hover:text-[#1F1915]">
-            Back to play
+          <Link href="/profile" className="hover:text-[#1F1915]">
+            Back to profile
           </Link>
         </div>
       </div>

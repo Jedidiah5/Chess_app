@@ -58,6 +58,12 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (!hasSupabaseEnv()) {
+    if (pathname === "/profile") {
+      const playUrl = request.nextUrl.clone();
+      playUrl.pathname = "/play";
+      playUrl.search = "";
+      return NextResponse.redirect(playUrl);
+    }
     return NextResponse.next({ request });
   }
 
@@ -76,6 +82,20 @@ export async function middleware(request: NextRequest) {
   }
 
   const onboarded = profile !== null && isOnboarded(profile);
+
+  // `/profile` is the post-game home: own profile when signed in, mode picker for guests.
+  if (pathname === "/profile") {
+    const homeUrl = request.nextUrl.clone();
+    homeUrl.search = "";
+    if (!user) {
+      homeUrl.pathname = "/play";
+    } else if (profile && isOnboarded(profile)) {
+      homeUrl.pathname = `/profile/${profile.username}`;
+    } else {
+      homeUrl.pathname = "/username";
+    }
+    return redirectWithSession(homeUrl, supabaseResponse);
+  }
 
   if (!user) {
     if (isAppPath(pathname) || pathname === "/username") {

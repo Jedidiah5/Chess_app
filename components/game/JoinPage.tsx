@@ -46,10 +46,10 @@ export function JoinPage({ code }: JoinPageProps) {
             <h1 className="text-xl font-semibold text-stone-900">Could not join game</h1>
             <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
             <Link
-              href="/play"
+              href="/profile"
               className="mt-6 inline-block text-sm text-stone-700 underline-offset-2 hover:underline"
             >
-              Back to play menu
+              Back to profile
             </Link>
           </>
         ) : (
