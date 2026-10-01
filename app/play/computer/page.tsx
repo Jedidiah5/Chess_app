@@ -25,7 +25,7 @@ import { OptionPlate } from "@/components/ui/OptionPlate";
 import { PaperButton } from "@/components/ui/PaperButton";
 import { PaperCard } from "@/components/ui/PaperCard";
 import type { BoardOrientation, Color, Promotion, Square } from "@/lib/chess/types";
-import { displayColor } from "@/lib/chess/types";
+import { STARTING_FEN, displayColor } from "@/lib/chess/types";
 import {
   clearActiveOfflineGame,
   getActiveOfflineGame,
@@ -51,6 +51,29 @@ type SetupState = {
   playerColor: Color;
 };
 
+/** Games here always start from the initial position, so white owns even plies. */
+function isPlayerPly(index: number, cfg: SetupState): boolean {
+  return (index % 2 === 0) === (cfg.playerColor === "w");
+}
+
+function UndoIcon({ flip = false }: { flip?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`h-4 w-4 ${flip ? "-scale-x-100" : ""}`}
+      aria-hidden
+    >
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+    </svg>
+  );
+}
+
 export default function ComputerPlayPage() {
   const router = useRouter();
   const { settings } = useAppSettings();
@@ -65,6 +88,8 @@ export default function ComputerPlayPage() {
   const [dismissedOver, setDismissedOver] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [moves, setMoves] = useState<OfflineMove[]>([]);
+  /** Each undo pushes the slice it removed so redo restores it exactly. */
+  const [redoStack, setRedoStack] = useState<OfflineMove[][]>([]);
   const [gameId, setGameId] = useState(() => newOfflineId());
   const stockfishRef = useRef<ReturnType<typeof createStockfish> | null>(null);
   const thinkGen = useRef(0);
@@ -203,6 +228,7 @@ export default function ComputerPlayPage() {
       const anim = buildAnimMoveFromCommit(prev, from, to, next.board, promotion);
       setEngine(next);
       setMoves(nextMoves);
+      setRedoStack([]);
       setSelectedSquare(null);
       setPendingPromotion(null);
       playMove(anim, next.board);
@@ -347,6 +373,79 @@ export default function ComputerPlayPage() {
     [applyEngineMove, pendingPromotion, setup],
   );
 
+  const showPosition = useCallback(
+    (nextMoves: OfflineMove[]) => {
+      const next = createEngine(nextMoves.at(-1)?.fen_after ?? STARTING_FEN);
+      setEngine(next);
+      setMoves(nextMoves);
+      setSelectedSquare(null);
+      setPendingPromotion(null);
+      setDismissedOver(false);
+      snapTo(next.board, null);
+      return next;
+    },
+    [snapTo],
+  );
+
+  const lastPlayerPly = useMemo(() => {
+    if (!setup) return -1;
+    for (let i = moves.length - 1; i >= 0; i -= 1) {
+      if (isPlayerPly(i, setup)) return i;
+    }
+    return -1;
+  }, [moves.length, setup]);
+
+  const canUndo = !busy && lastPlayerPly >= 0;
+  const canRedo = !busy && !thinking && redoStack.length > 0;
+
+  /** Takes back your last move and the computer's reply, so it's your turn again. */
+  const handleUndo = useCallback(() => {
+    if (!setup || !canUndo) return;
+    if (thinking) {
+      // A stopped search can still answer late; a fresh worker can't mix it up.
+      thinkGen.current += 1;
+      stockfishRef.current?.dispose();
+      stockfishRef.current = null;
+      setThinking(false);
+    }
+    if (engine.terminal.over) {
+      // The finished game is already archived; a replayed ending is a new game.
+      setGameId(newOfflineId());
+    }
+    setRedoStack((stack) => [...stack, moves.slice(lastPlayerPly)]);
+    const kept = moves.slice(0, lastPlayerPly);
+    const next = showPosition(kept);
+    void persistActive(next.fen, kept.map((m) => m.san), kept, setup);
+  }, [canUndo, engine.terminal.over, lastPlayerPly, moves, persistActive, setup, showPosition, thinking]);
+
+  const handleRedo = useCallback(() => {
+    if (!setup || !canRedo) return;
+    const restored = [...moves, ...redoStack[redoStack.length - 1]];
+    setRedoStack((stack) => stack.slice(0, -1));
+    const next = showPosition(restored);
+    if (next.terminal.over) {
+      void clearActiveOfflineGame();
+    } else {
+      void persistActive(next.fen, restored.map((m) => m.san), restored, setup);
+    }
+  }, [canRedo, moves, persistActive, redoStack, setup, showPosition]);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      const key = event.key.toLowerCase();
+      if (key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+      } else if (key === "y" || (key === "z" && event.shiftKey)) {
+        event.preventDefault();
+        handleRedo();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [handleRedo, handleUndo]);
+
   const handleNewGame = useCallback(() => {
     thinkGen.current += 1;
     stockfishRef.current?.dispose();
@@ -355,6 +454,7 @@ export default function ComputerPlayPage() {
     setSetup(null);
     setEngine(createEngine());
     setMoves([]);
+    setRedoStack([]);
     setSelectedSquare(null);
     setPendingPromotion(null);
     setDismissedOver(false);
@@ -378,6 +478,7 @@ export default function ComputerPlayPage() {
       setSetup(cfg);
       setEngine(fresh);
       setMoves([]);
+      setRedoStack([]);
       setGameId(newOfflineId());
       setDismissedOver(false);
       snapTo(fresh.board, null);
@@ -499,6 +600,30 @@ export default function ComputerPlayPage() {
           />
 
           <div className="flex flex-wrap justify-center gap-3">
+            <PaperButton
+              variant="ghost"
+              onClick={handleUndo}
+              disabled={!canUndo}
+              aria-keyshortcuts="Control+Z"
+              title="Undo (Ctrl+Z)"
+            >
+              <span className="inline-flex items-center gap-2">
+                <UndoIcon />
+                Undo
+              </span>
+            </PaperButton>
+            <PaperButton
+              variant="ghost"
+              onClick={handleRedo}
+              disabled={!canRedo}
+              aria-keyshortcuts="Control+Y"
+              title="Redo (Ctrl+Y)"
+            >
+              <span className="inline-flex items-center gap-2">
+                Redo
+                <UndoIcon flip />
+              </span>
+            </PaperButton>
             <PaperButton variant="primary" onClick={handleNewGame}>
               New game
             </PaperButton>
@@ -543,6 +668,14 @@ export default function ComputerPlayPage() {
               <PaperButton variant="primary" onClick={handleNewGame}>
                 New game
               </PaperButton>
+              {canUndo && (
+                <PaperButton variant="ghost" onClick={handleUndo}>
+                  <span className="inline-flex items-center gap-2">
+                    <UndoIcon />
+                    Undo last move
+                  </span>
+                </PaperButton>
+              )}
               <PaperButton variant="ghost" onClick={handleQuit}>
                 Back to profile
               </PaperButton>
