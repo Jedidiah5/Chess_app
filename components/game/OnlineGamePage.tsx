@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { Board, findKingSquare } from "@/components/board/Board";
+import { CapturedPieces } from "@/components/board/CapturedPieces";
 import { Clock } from "@/components/board/Clock";
 import { DisconnectBanner } from "@/components/board/DisconnectBanner";
 import { GameControls } from "@/components/board/GameControls";
@@ -689,15 +690,25 @@ export function OnlineGamePage({ gameId }: OnlineGamePageProps) {
                 }
               />
 
-              <Board
-                pieces={engine.board}
-                motionPieces={motionPieces}
-                orientation={orientation}
-                selectedSquare={selectedSquare}
-                legalTargets={legalTargets}
-                inCheckSquare={inCheckSquare}
-                onSquareTap={handleSquareTap}
-              />
+              <div className="flex w-full max-w-[min(90vw,560px)] flex-col items-center gap-1.5">
+                <CapturedPieces
+                  board={engine.board}
+                  side={orientation === "white" ? "b" : "w"}
+                />
+                <Board
+                  pieces={engine.board}
+                  motionPieces={motionPieces}
+                  orientation={orientation}
+                  selectedSquare={selectedSquare}
+                  legalTargets={legalTargets}
+                  inCheckSquare={inCheckSquare}
+                  onSquareTap={handleSquareTap}
+                />
+                <CapturedPieces
+                  board={engine.board}
+                  side={orientation === "white" ? "w" : "b"}
+                />
+              </div>
 
               <Clock
                 label={orientation === "white" ? "White" : "Black"}

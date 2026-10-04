@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Board, findKingSquare } from "@/components/board/Board";
+import { CapturedPieces } from "@/components/board/CapturedPieces";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
 import {
@@ -281,15 +282,25 @@ export default function LocalPlayPage() {
             </div>
           </header>
 
-          <Board
-            pieces={engine.board}
-            motionPieces={motionPieces}
-            orientation={orientation}
-            selectedSquare={selectedSquare}
-            legalTargets={legalTargets}
-            inCheckSquare={inCheckSquare}
-            onSquareTap={handleSquareTap}
-          />
+          <div className="flex w-full max-w-[min(90vw,560px)] flex-col items-center gap-1.5">
+            <CapturedPieces
+              board={engine.board}
+              side={orientation === "white" ? "b" : "w"}
+            />
+            <Board
+              pieces={engine.board}
+              motionPieces={motionPieces}
+              orientation={orientation}
+              selectedSquare={selectedSquare}
+              legalTargets={legalTargets}
+              inCheckSquare={inCheckSquare}
+              onSquareTap={handleSquareTap}
+            />
+            <CapturedPieces
+              board={engine.board}
+              side={orientation === "white" ? "w" : "b"}
+            />
+          </div>
 
           <div className="flex flex-wrap justify-center gap-3">
             <PaperButton variant="primary" onClick={handleNewGame}>
