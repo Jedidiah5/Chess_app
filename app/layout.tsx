@@ -1,42 +1,45 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Cinzel,
-  Cormorant_Garamond,
-  Newsreader,
-  Space_Mono,
-} from "next/font/google";
+import localFont from "next/font/local";
 import "./paper-tokens.css";
 import "./globals.css";
 import { OfflineIndicator, OfflineUploadOnReconnect } from "@/components/offline/OfflineUI";
 import { ServiceWorkerRegister } from "@/components/offline/ServiceWorkerRegister";
 
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  style: ["normal", "italic"],
+// Latin subsets self-hosted from Google Fonts so builds never depend on fonts.googleapis.com.
+const newsreader = localFont({
+  src: [
+    { path: "./fonts/newsreader-normal.woff2", weight: "400 700", style: "normal" },
+    { path: "./fonts/newsreader-italic.woff2", weight: "400 700", style: "italic" },
+  ],
   variable: "--font-newsreader",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  style: ["normal", "italic"],
+const cormorant = localFont({
+  src: [
+    { path: "./fonts/cormorant-normal.woff2", weight: "400 700", style: "normal" },
+    { path: "./fonts/cormorant-italic.woff2", weight: "400 700", style: "italic" },
+  ],
   variable: "--font-cormorant",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const cinzel = Cinzel({
-  subsets: ["latin"],
-  weight: ["600", "700", "900"],
+const cinzel = localFont({
+  src: [{ path: "./fonts/cinzel-normal.woff2", weight: "600 900", style: "normal" }],
   variable: "--font-cinzel",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const spaceMono = Space_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  style: ["normal", "italic"],
+const spaceMono = localFont({
+  src: [
+    { path: "./fonts/space-mono-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/space-mono-400-italic.woff2", weight: "400", style: "italic" },
+    { path: "./fonts/space-mono-700.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/space-mono-700-italic.woff2", weight: "700", style: "italic" },
+  ],
   variable: "--font-space-mono",
   display: "swap",
 });
