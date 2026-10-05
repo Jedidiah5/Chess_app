@@ -4,6 +4,7 @@ import "./paper-tokens.css";
 import "./globals.css";
 import { OfflineIndicator, OfflineUploadOnReconnect } from "@/components/offline/OfflineUI";
 import { ServiceWorkerRegister } from "@/components/offline/ServiceWorkerRegister";
+import { Analytics } from "@vercel/analytics/next";
 
 // Latin subsets self-hosted from Google Fonts so builds never depend on fonts.googleapis.com.
 const newsreader = localFont({
@@ -83,6 +84,7 @@ export default function RootLayout({
         <OfflineUploadOnReconnect />
         <ServiceWorkerRegister />
         {children}
+        <Analytics />
       </body>
     </html>
   );
